@@ -3,7 +3,7 @@
  * Reads PR context from environment and GitHub event payload.
  */
 
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient, fetchPR } from "../core/github/client.js";
 import { generateSpec } from "../core/parsing/pr-parser.js";
@@ -103,8 +103,7 @@ async function main(): Promise<void> {
 function setOutput(name: string, value: string): void {
 	const outputFile = process.env.GITHUB_OUTPUT;
 	if (outputFile) {
-		const fs = require("node:fs");
-		fs.appendFileSync(outputFile, `${name}=${value}\n`);
+		appendFileSync(outputFile, `${name}=${value}\n`);
 	}
 }
 

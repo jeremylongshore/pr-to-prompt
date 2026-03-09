@@ -1,4 +1,4 @@
-name: "PR to Spec"
+name: "PR to Prompt"
 description: "Convert GitHub PRs into structured prompt-spec artifacts for AI-assisted review"
 author: "Jeremy Longshore"
 
@@ -34,4 +34,4 @@ outputs:
 
 runs:
   using: "node20"
-  main: "dist/action/index.js"
+  main: "dist/action-bundle/index.js"

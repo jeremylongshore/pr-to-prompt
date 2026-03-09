@@ -1,4 +1,4 @@
-name: PR to Spec
+name: PR to Prompt
 
 on:
   pull_request:
@@ -15,22 +15,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
+      - name: Generate prompt-spec
+        uses: ./
         with:
-          version: 9
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "pnpm"
-
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build
-
-      - name: Generate spec
-        run: node dist/cli/index.js --repo ${{ github.repository }} --pr ${{ github.event.pull_request.number }} --out .pr-to-prompt/specs --comment
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          comment: "true"
+          output_dir: .pr-to-prompt/specs
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_COMMENT: "true"
+          INPUT_OUTPUT_DIR: .pr-to-prompt/specs
 
       - name: Upload spec artifact
         uses: actions/upload-artifact@v4

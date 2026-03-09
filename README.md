@@ -76,7 +76,7 @@ Add this workflow to any repository:
 
 ```yaml
 # .github/workflows/pr-to-prompt.yml
-name: PR to Spec
+name: PR to Prompt
 on:
   pull_request:
     types: [opened, synchronize]
@@ -90,23 +90,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "pnpm"
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build
-      - name: Generate spec
-        run: node dist/cli/index.js --repo ${{ github.repository }} --pr ${{ github.event.pull_request.number }} --out .pr-to-prompt/specs --comment
+
+      - name: Generate prompt-spec
+        uses: jeremylongshore/pr-to-prompt@v0.1.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_COMMENT: "true"
+          INPUT_OUTPUT_DIR: .pr-to-prompt/specs
+
       - uses: actions/upload-artifact@v4
         with:
           name: prompt-spec-pr-${{ github.event.pull_request.number }}
           path: .pr-to-prompt/specs/
+```
+
+### npm / npx Usage
+
+```bash
+# Install globally
+npm install -g pr-to-prompt
+
+# Or run directly with npx
+npx pr-to-prompt --repo owner/name --pr 42 --out ./output
 ```
 
 ## Sample Output
