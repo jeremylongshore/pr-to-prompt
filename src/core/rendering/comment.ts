@@ -59,6 +59,20 @@ export function renderComment(spec: PromptSpec): string {
 		lines.push("");
 	}
 
+	// AI insights (if available)
+	if (spec.ai_enhanced) {
+		lines.push("### AI Insights");
+		lines.push(spec.ai_enhanced.summary);
+		if (spec.ai_enhanced.review_hints.length > 0) {
+			lines.push("");
+			lines.push("**Review focus:**");
+			for (const h of spec.ai_enhanced.review_hints) {
+				lines.push(`- ${h}`);
+			}
+		}
+		lines.push("");
+	}
+
 	// Copy-ready prompt block
 	lines.push("<details>");
 	lines.push("<summary>📋 Copy-ready prompt spec</summary>");

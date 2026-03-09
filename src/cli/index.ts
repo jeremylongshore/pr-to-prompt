@@ -3,6 +3,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { program } from "commander";
+import { type AIEnhanceOptions, enhanceSpec } from "../core/ai/enhancer.js";
 import { createClient, fetchPR } from "../core/github/client.js";
 import { generateSpec } from "../core/parsing/pr-parser.js";
 import { renderComment } from "../core/rendering/comment.js";
@@ -20,6 +21,9 @@ program
 	.option("--comment", "Post spec summary as a PR comment", false)
 	.option("--format <format>", "Output format: yaml, markdown, both", "both")
 	.option("--stdout", "Print to stdout instead of writing files", false)
+	.option("--ai-enhance", "Enhance spec with AI-generated insights", false)
+	.option("--ai-provider <provider>", "AI provider: anthropic, openai", "anthropic")
+	.option("--ai-model <model>", "AI model override")
 	.action(async (opts) => {
 		try {
 			await run(opts);
@@ -38,6 +42,9 @@ interface CLIOptions {
 	comment: boolean;
 	format: string;
 	stdout: boolean;
+	aiEnhance: boolean;
+	aiProvider: string;
+	aiModel?: string;
 }
 
 async function run(opts: CLIOptions): Promise<void> {
@@ -62,7 +69,24 @@ async function run(opts: CLIOptions): Promise<void> {
 	const prData = await fetchPR(octokit, owner, repo, opts.pr);
 
 	console.log(`Generating prompt-spec for: "${prData.title}"`);
-	const spec = generateSpec(prData, opts.repo);
+	let spec = generateSpec(prData, opts.repo);
+
+	if (opts.aiEnhance) {
+		const aiKey = resolveAIKey(opts.aiProvider);
+		if (!aiKey) {
+			throw new Error(
+				`AI enhancement requires an API key. Set ${opts.aiProvider === "openai" ? "OPENAI_API_KEY" : "ANTHROPIC_API_KEY"} env var.`,
+			);
+		}
+		console.log(`Enhancing with AI (${opts.aiProvider})...`);
+		const aiOpts: AIEnhanceOptions = {
+			provider: opts.aiProvider as "anthropic" | "openai",
+			apiKey: aiKey,
+			model: opts.aiModel,
+		};
+		spec = await enhanceSpec(spec, aiOpts);
+		console.log("  AI enhancement complete.");
+	}
 
 	const yamlOutput = renderYaml(spec);
 	const mdOutput = renderMarkdown(spec);
@@ -106,6 +130,13 @@ async function run(opts: CLIOptions): Promise<void> {
 	}
 
 	console.log("Done.");
+}
+
+function resolveAIKey(provider: string): string | undefined {
+	if (provider === "openai") {
+		return process.env.OPENAI_API_KEY;
+	}
+	return process.env.ANTHROPIC_API_KEY;
 }
 
 program.parse();

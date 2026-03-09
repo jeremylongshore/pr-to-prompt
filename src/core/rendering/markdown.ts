@@ -113,6 +113,31 @@ export function renderMarkdown(spec: PromptSpec): string {
 		lines.push("");
 	}
 
+	// AI Enhanced
+	if (spec.ai_enhanced) {
+		lines.push("## AI-Enhanced Analysis");
+		lines.push(`> Provider: ${spec.ai_enhanced.provider}`);
+		lines.push("");
+		lines.push(`**Summary:** ${spec.ai_enhanced.summary}`);
+		lines.push("");
+		lines.push(`**Goal:** ${spec.ai_enhanced.goal}`);
+		lines.push("");
+		if (spec.ai_enhanced.key_changes.length > 0) {
+			lines.push("**Key Changes:**");
+			for (const c of spec.ai_enhanced.key_changes) {
+				lines.push(`- ${c}`);
+			}
+			lines.push("");
+		}
+		if (spec.ai_enhanced.review_hints.length > 0) {
+			lines.push("**Review Hints:**");
+			for (const h of spec.ai_enhanced.review_hints) {
+				lines.push(`- ${h}`);
+			}
+			lines.push("");
+		}
+	}
+
 	// Generation Prompt
 	lines.push("## Generation Prompt");
 	lines.push("```");
