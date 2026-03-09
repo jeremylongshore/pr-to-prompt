@@ -1,5 +1,6 @@
 node_modules/
 dist/
+!dist/action-bundle/
 *.tsbuildinfo
 .env
 .env.local
