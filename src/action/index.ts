@@ -5,6 +5,7 @@
 
 import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { type AIEnhanceOptions, enhanceSpec } from "../core/ai/enhancer.js";
 import { createClient, fetchPR } from "../core/github/client.js";
 import { generateSpec } from "../core/parsing/pr-parser.js";
 import { renderComment } from "../core/rendering/comment.js";
@@ -15,13 +16,25 @@ interface ActionInputs {
 	token: string;
 	comment: boolean;
 	outputDir: string;
+	aiEnhance: boolean;
+	aiProvider: "anthropic" | "openai";
+	aiApiKey: string;
+	aiModel?: string;
 }
 
 function getInputs(): ActionInputs {
+	const aiProvider = (process.env.INPUT_AI_PROVIDER ?? "anthropic") as "anthropic" | "openai";
 	return {
 		token: process.env.GITHUB_TOKEN ?? process.env.INPUT_GITHUB_TOKEN ?? "",
 		comment: (process.env.INPUT_COMMENT ?? "true") === "true",
 		outputDir: process.env.INPUT_OUTPUT_DIR ?? ".pr-to-prompt/specs",
+		aiEnhance: (process.env.INPUT_AI_ENHANCE ?? "false") === "true",
+		aiProvider,
+		aiApiKey:
+			process.env.INPUT_AI_API_KEY ??
+			(aiProvider === "openai" ? process.env.OPENAI_API_KEY : process.env.ANTHROPIC_API_KEY) ??
+			"",
+		aiModel: process.env.INPUT_AI_MODEL || undefined,
 	};
 }
 
@@ -59,7 +72,19 @@ async function main(): Promise<void> {
 	console.log("::endgroup::");
 
 	console.log("::group::Generating prompt-spec");
-	const spec = generateSpec(prData, repoFull);
+	let spec = generateSpec(prData, repoFull);
+
+	if (inputs.aiEnhance && inputs.aiApiKey) {
+		console.log(`Enhancing with AI (${inputs.aiProvider})...`);
+		const aiOpts: AIEnhanceOptions = {
+			provider: inputs.aiProvider,
+			apiKey: inputs.aiApiKey,
+			model: inputs.aiModel,
+		};
+		spec = await enhanceSpec(spec, aiOpts);
+		console.log("AI enhancement complete.");
+	}
+
 	const yamlOutput = renderYaml(spec);
 	const mdOutput = renderMarkdown(spec);
 	console.log("::endgroup::");

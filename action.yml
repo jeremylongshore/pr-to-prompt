@@ -19,6 +19,20 @@ inputs:
     description: "Directory to write spec artifacts"
     required: false
     default: ".pr-to-prompt/specs"
+  ai_enhance:
+    description: "Enhance spec with AI-generated insights (requires ai_api_key)"
+    required: false
+    default: "false"
+  ai_provider:
+    description: "AI provider: anthropic or openai"
+    required: false
+    default: "anthropic"
+  ai_api_key:
+    description: "API key for AI provider (or set ANTHROPIC_API_KEY/OPENAI_API_KEY)"
+    required: false
+  ai_model:
+    description: "Override the default AI model"
+    required: false
 
 outputs:
   spec_yaml_path:

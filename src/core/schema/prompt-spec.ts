@@ -60,6 +60,15 @@ export const PromptSpecSchema = z.object({
 		deletions: z.number(),
 		commits: z.number(),
 	}),
+	ai_enhanced: z
+		.object({
+			summary: z.string(),
+			goal: z.string(),
+			key_changes: z.array(z.string()),
+			review_hints: z.array(z.string()),
+			provider: z.string(),
+		})
+		.optional(),
 });
 
 export type PromptSpec = z.infer<typeof PromptSpecSchema>;

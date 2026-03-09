@@ -1,3 +1,4 @@
+export { enhanceSpec, type AIEnhanceOptions } from "./core/ai/enhancer.js";
 export { PromptSpecSchema, type PromptSpec, type FileChange } from "./core/schema/prompt-spec.js";
 export { createClient, fetchPR, type PRData, type PRFile } from "./core/github/client.js";
 export { generateSpec, compactSpec } from "./core/parsing/pr-parser.js";
