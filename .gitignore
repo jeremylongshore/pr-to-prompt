@@ -1,0 +1,14 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.env
+.env.local
+coverage/
+.pr-to-prompt/
+output/
+*.log
+.DS_Store
+
+# Dolt database files (added by bd init)
+.dolt/
+*.db

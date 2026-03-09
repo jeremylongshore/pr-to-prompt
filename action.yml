@@ -1,0 +1,37 @@
+name: "PR to Spec"
+description: "Convert GitHub PRs into structured prompt-spec artifacts for AI-assisted review"
+author: "Jeremy Longshore"
+
+branding:
+  icon: "file-text"
+  color: "blue"
+
+inputs:
+  github_token:
+    description: "GitHub token for API access"
+    required: false
+    default: ${{ github.token }}
+  comment:
+    description: "Post spec summary as a PR comment"
+    required: false
+    default: "true"
+  output_dir:
+    description: "Directory to write spec artifacts"
+    required: false
+    default: ".pr-to-prompt/specs"
+
+outputs:
+  spec_yaml_path:
+    description: "Path to the generated YAML spec"
+  spec_md_path:
+    description: "Path to the generated Markdown summary"
+  pr_number:
+    description: "PR number that was analyzed"
+  files_changed:
+    description: "Number of files changed in the PR"
+  risk_count:
+    description: "Number of risk flags identified"
+
+runs:
+  using: "node20"
+  main: "dist/action/index.js"
