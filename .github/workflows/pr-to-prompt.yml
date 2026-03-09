@@ -28,7 +28,7 @@ jobs:
       - run: pnpm build
 
       - name: Generate spec
-        run: node dist/cli/index.js --repo ${{ github.repository }} --pr ${{ github.event.pull_request.number }} --out .pr-to-spec/specs --comment
+        run: node dist/cli/index.js --repo ${{ github.repository }} --pr ${{ github.event.pull_request.number }} --out .pr-to-prompt/specs --comment
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -36,5 +36,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: prompt-spec-pr-${{ github.event.pull_request.number }}
-          path: .pr-to-spec/specs/
+          path: .pr-to-prompt/specs/
           retention-days: 30

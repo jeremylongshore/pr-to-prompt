@@ -1,5 +1,5 @@
 /**
- * GitHub Action entrypoint for pr-to-spec.
+ * GitHub Action entrypoint for pr-to-prompt.
  * Reads PR context from environment and GitHub event payload.
  */
 
@@ -21,7 +21,7 @@ function getInputs(): ActionInputs {
 	return {
 		token: process.env.GITHUB_TOKEN ?? process.env.INPUT_GITHUB_TOKEN ?? "",
 		comment: (process.env.INPUT_COMMENT ?? "true") === "true",
-		outputDir: process.env.INPUT_OUTPUT_DIR ?? ".pr-to-spec/specs",
+		outputDir: process.env.INPUT_OUTPUT_DIR ?? ".pr-to-prompt/specs",
 	};
 }
 

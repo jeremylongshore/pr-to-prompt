@@ -11,20 +11,20 @@
 If you discover a security vulnerability, please report it responsibly:
 
 1. **Do not** open a public GitHub issue
-2. Email: [Create a private security advisory](https://github.com/jeremylongshore/pr-to-spec/security/advisories/new)
+2. Email: [Create a private security advisory](https://github.com/jeremylongshore/pr-to-prompt/security/advisories/new)
 3. Include steps to reproduce and impact assessment
 
 We will respond within 48 hours and aim to release a fix within 7 days for critical issues.
 
 ## Security Model
 
-### What pr-to-spec does
+### What pr-to-prompt does
 
 - Reads PR metadata and diffs via the GitHub API (read-only by default)
 - Generates structured specs from metadata using deterministic heuristics
 - Optionally posts comments to PRs (requires write permission)
 
-### What pr-to-spec does NOT do
+### What pr-to-prompt does NOT do
 
 - Execute code from PRs
 - Checkout or run untrusted code

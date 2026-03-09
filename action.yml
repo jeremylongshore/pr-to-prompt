@@ -18,7 +18,7 @@ inputs:
   output_dir:
     description: "Directory to write spec artifacts"
     required: false
-    default: ".pr-to-spec/specs"
+    default: ".pr-to-prompt/specs"
 
 outputs:
   spec_yaml_path:

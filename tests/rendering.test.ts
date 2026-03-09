@@ -99,7 +99,7 @@ describe("renderComment", () => {
 		const spec = generateSpec(makePR(), "owner/repo");
 		const comment = renderComment(spec);
 		expect(comment).toContain("## PR Spec Analysis");
-		expect(comment).toContain("pr-to-spec");
+		expect(comment).toContain("pr-to-prompt");
 	});
 
 	it("includes acceptance criteria as checkboxes", () => {

@@ -1,5 +1,5 @@
 name: Feature Request
-description: Suggest a new feature for pr-to-spec
+description: Suggest a new feature for pr-to-prompt
 title: "[Feature]: "
 labels: ["enhancement"]
 body:

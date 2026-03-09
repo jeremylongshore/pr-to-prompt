@@ -1,12 +1,12 @@
-# Contributing to pr-to-spec
+# Contributing to pr-to-prompt
 
 Thanks for your interest in contributing!
 
 ## Getting Started
 
 ```bash
-git clone https://github.com/jeremylongshore/pr-to-spec.git
-cd pr-to-spec
+git clone https://github.com/jeremylongshore/pr-to-prompt.git
+cd pr-to-prompt
 pnpm install
 pnpm build
 pnpm test

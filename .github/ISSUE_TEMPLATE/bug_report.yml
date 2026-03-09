@@ -1,5 +1,5 @@
 name: Bug Report
-description: Report a bug in pr-to-spec
+description: Report a bug in pr-to-prompt
 title: "[Bug]: "
 labels: ["bug"]
 body:
@@ -29,14 +29,14 @@ body:
       label: Reproduction steps
       description: How can we reproduce this?
       placeholder: |
-        1. Run `pr-to-spec --repo owner/repo --pr 42`
+        1. Run `pr-to-prompt --repo owner/repo --pr 42`
         2. See error...
 
   - type: input
     id: version
     attributes:
       label: Version
-      description: "pr-to-spec version (run `pr-to-spec --version`)"
+      description: "pr-to-prompt version (run `pr-to-prompt --version`)"
 
   - type: dropdown
     id: usage

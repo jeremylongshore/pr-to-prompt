@@ -1,10 +1,10 @@
-# pr-to-spec
+# pr-to-prompt
 
 Convert GitHub pull requests into structured, reviewable **prompt-spec** artifacts.
 
-Give any PR to `pr-to-spec` and get back a canonical specification that a maintainer can use to understand, review, and regenerate the change with their own AI tools.
+Give any PR to `pr-to-prompt` and get back a canonical specification that a maintainer can use to understand, review, and regenerate the change with their own AI tools.
 
-[![CI](https://github.com/jeremylongshore/pr-to-spec/actions/workflows/ci.yml/badge.svg)](https://github.com/jeremylongshore/pr-to-spec/actions/workflows/ci.yml)
+[![CI](https://github.com/jeremylongshore/pr-to-prompt/actions/workflows/ci.yml/badge.svg)](https://github.com/jeremylongshore/pr-to-prompt/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 ---
@@ -23,7 +23,7 @@ Pull requests are optimized for code review, not for understanding intent. When 
 ## How It Works
 
 ```
-PR opened → pr-to-spec analyzes metadata + diffs → generates structured YAML spec
+PR opened → pr-to-prompt analyzes metadata + diffs → generates structured YAML spec
 ```
 
 1. Fetches PR metadata, files, and diffs via GitHub API
@@ -39,8 +39,8 @@ No AI key needed for core functionality. The spec is built from heuristics and t
 
 ```bash
 # Clone and build
-git clone https://github.com/jeremylongshore/pr-to-spec.git
-cd pr-to-spec
+git clone https://github.com/jeremylongshore/pr-to-prompt.git
+cd pr-to-prompt
 pnpm install
 pnpm build
 
@@ -75,7 +75,7 @@ Options:
 Add this workflow to any repository:
 
 ```yaml
-# .github/workflows/pr-to-spec.yml
+# .github/workflows/pr-to-prompt.yml
 name: PR to Spec
 on:
   pull_request:
@@ -100,13 +100,13 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - name: Generate spec
-        run: node dist/cli/index.js --repo ${{ github.repository }} --pr ${{ github.event.pull_request.number }} --out .pr-to-spec/specs --comment
+        run: node dist/cli/index.js --repo ${{ github.repository }} --pr ${{ github.event.pull_request.number }} --out .pr-to-prompt/specs --comment
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/upload-artifact@v4
         with:
           name: prompt-spec-pr-${{ github.event.pull_request.number }}
-          path: .pr-to-spec/specs/
+          path: .pr-to-prompt/specs/
 ```
 
 ## Sample Output
@@ -177,7 +177,7 @@ Add tenant-aware API rate limiting to public routes
 |----------|----------|-------------|
 | `GITHUB_TOKEN` | Yes | GitHub token with PR read access |
 | `ANTHROPIC_API_KEY` | No | For optional AI-enhanced summaries (v2) |
-| `PR_TO_SPEC_AI_ENHANCE` | No | Enable AI enhancement (`true`/`false`) |
+| `PR_TO_PROMPT_AI_ENHANCE` | No | Enable AI enhancement (`true`/`false`) |
 
 ### Token Scopes
 
@@ -252,7 +252,7 @@ pnpm dev           # Watch mode for development
 - [ ] Support for monorepo scope detection
 
 ### v1.2
-- [ ] Published npm package (`npx pr-to-spec`)
+- [ ] Published npm package (`npx pr-to-prompt`)
 - [ ] GitHub Marketplace action
 - [ ] Spec versioning and diff between spec versions
 

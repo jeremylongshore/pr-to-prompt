@@ -10,7 +10,7 @@ import { renderMarkdown } from "../core/rendering/markdown.js";
 import { renderYaml } from "../core/rendering/yaml.js";
 
 program
-	.name("pr-to-spec")
+	.name("pr-to-prompt")
 	.description("Convert GitHub PRs into structured prompt-spec artifacts")
 	.version("0.1.0")
 	.requiredOption("--repo <owner/name>", "GitHub repository (owner/name)")
