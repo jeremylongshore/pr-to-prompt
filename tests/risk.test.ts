@@ -75,4 +75,40 @@ describe("classifyRisks", () => {
 		const risks = classifyRisks([file({ filename: "src/auth/config.ts" })]);
 		expect(risks.length).toBeGreaterThanOrEqual(2);
 	});
+
+	// Regression: false-positive fixes
+	it("does not flag docs/test paths for auth", () => {
+		const risks = classifyRisks([file({ filename: "docs/auth-guide.md" })]);
+		expect(risks.some((r) => r.category === "authentication")).toBe(false);
+	});
+
+	it("does not flag generic config files as secrets", () => {
+		const risks = classifyRisks([file({ filename: "src/config/app.ts" })]);
+		expect(risks.some((r) => r.category === "secrets")).toBe(false);
+	});
+
+	it("flags config files with sensitive context as secrets", () => {
+		const risks = classifyRisks([file({ filename: "src/config/database-credentials.ts" })]);
+		expect(risks.some((r) => r.category === "secrets")).toBe(true);
+	});
+
+	it("does not flag generic schema files as database risk", () => {
+		const risks = classifyRisks([file({ filename: "src/schema/prompt-spec.ts" })]);
+		expect(risks.some((r) => r.category === "database")).toBe(false);
+	});
+
+	it("flags DB schema files as database risk", () => {
+		const risks = classifyRisks([file({ filename: "src/prisma/schema.prisma" })]);
+		expect(risks.some((r) => r.category === "database")).toBe(true);
+	});
+
+	it("does not flag test files for permissions", () => {
+		const risks = classifyRisks([file({ filename: "__tests__/rbac.test.ts" })]);
+		expect(risks.some((r) => r.category === "permissions")).toBe(false);
+	});
+
+	it("does not flag doc files for security-config", () => {
+		const risks = classifyRisks([file({ filename: "docs/security-best-practices.md" })]);
+		expect(risks.some((r) => r.category === "security-config")).toBe(false);
+	});
 });

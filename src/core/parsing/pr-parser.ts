@@ -111,13 +111,18 @@ function inferGoal(pr: PRData): string {
 }
 
 function inferScope(pr: PRData): { include: string[]; exclude: string[] } {
-	// Group files by directory
+	// Group files by top-level directory paths
 	const dirs = new Set<string>();
 	for (const f of pr.files) {
 		const parts = f.filename.split("/");
-		if (parts.length > 1) {
+		if (parts.length > 2) {
+			// Deep path: use top two directory segments as glob
 			dirs.add(`${parts[0]}/${parts[1]}/**`);
+		} else if (parts.length === 2) {
+			// Single directory + file: use the exact path
+			dirs.add(f.filename);
 		} else {
+			// Root-level file
 			dirs.add(f.filename);
 		}
 	}
@@ -135,7 +140,15 @@ function inferConstraints(pr: PRData): string[] {
 		constraints.push("Existing tests must continue to pass");
 	}
 
-	if (pr.files.some((f) => /migration|schema/i.test(f.filename))) {
+	if (
+		pr.files.some(
+			(f) =>
+				/\b(migration|migrate)\b/i.test(f.filename) ||
+				/\.sql$/.test(f.filename) ||
+				(/\bschema\b/i.test(f.filename) &&
+					/\b(db|database|prisma|drizzle|knex|sequelize|typeorm|sql|alembic)\b/i.test(f.filename)),
+		)
+	) {
 		constraints.push("Database migrations must be backwards-compatible");
 	}
 
