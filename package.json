@@ -1,0 +1,53 @@
+{
+  "name": "pr-to-spec",
+  "version": "0.1.0",
+  "description": "Convert GitHub PRs into structured, reviewable prompt-spec artifacts",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "pr-to-spec": "dist/cli/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "biome check src/ tests/",
+    "lint:fix": "biome check --write src/ tests/",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "format": "biome format --write src/ tests/",
+    "check": "pnpm lint && pnpm typecheck && pnpm test"
+  },
+  "keywords": [
+    "github",
+    "pull-request",
+    "prompt",
+    "spec",
+    "ai",
+    "code-review",
+    "claude",
+    "llm",
+    "developer-tools"
+  ],
+  "author": "Jeremy Longshore",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jeremylongshore/pr-to-spec.git"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@octokit/rest": "^21.1.1",
+    "commander": "^13.1.0",
+    "yaml": "^2.7.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/node": "^22.13.10",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.8"
+  }
+}
