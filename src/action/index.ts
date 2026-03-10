@@ -80,7 +80,7 @@ async function sendWebhook(
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
-			"User-Agent": "pr-to-prompt/0.1.0",
+			"User-Agent": "pr-to-prompt/0.5.0",
 		},
 		body: payload,
 	});

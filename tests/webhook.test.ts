@@ -79,7 +79,7 @@ describe("webhook payload", () => {
 	it("webhook POST uses correct headers", () => {
 		const headers = {
 			"Content-Type": "application/json",
-			"User-Agent": "pr-to-prompt/0.1.0",
+			"User-Agent": "pr-to-prompt/0.5.0",
 		};
 		expect(headers["Content-Type"]).toBe("application/json");
 		expect(headers["User-Agent"]).toContain("pr-to-prompt");

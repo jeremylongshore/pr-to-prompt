@@ -1,6 +1,6 @@
 {
   "name": "pr-to-prompt",
-  "version": "0.1.0",
+  "version": "0.5.0",
   "description": "Convert GitHub PRs into structured, reviewable prompt-spec artifacts",
   "type": "module",
   "main": "dist/index.js",
