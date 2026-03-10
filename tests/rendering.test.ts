@@ -21,6 +21,8 @@ function makePR(): PRData {
 		changed_files: 2,
 		labels: [],
 		linked_issues: [],
+		review_comments: [],
+		reviews: [],
 		files: [
 			{
 				filename: "src/webhooks/stripe.ts",

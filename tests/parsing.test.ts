@@ -19,6 +19,8 @@ function makePR(overrides: Partial<PRData> = {}): PRData {
 		changed_files: 3,
 		labels: [],
 		linked_issues: [],
+		review_comments: [],
+		reviews: [],
 		files: [
 			{
 				filename: "src/middleware/rateLimit.ts",

@@ -1,6 +1,8 @@
 import type { PRData } from "../github/client.js";
 import { classifyRisks } from "../risk/classifier.js";
 import type { FileChange, PromptSpec } from "../schema/prompt-spec.js";
+import { detectMonorepo } from "./monorepo-detector.js";
+import { parseReviews } from "./review-parser.js";
 
 /**
  * Deterministic spec generation from PR metadata.
@@ -14,6 +16,8 @@ export function generateSpec(pr: PRData, repo: string): PromptSpec {
 	const acceptanceCriteria = inferAcceptanceCriteria(pr);
 	const verification = inferVerification(pr);
 	const risks = classifyRisks(pr.files);
+	const reviewSummary = parseReviews(pr);
+	const monorepo = detectMonorepo(pr.files);
 	const openQuestions = inferOpenQuestions(pr, risks);
 	const prompt = buildGenerationPrompt(pr, repo, likelyGoal, scope, constraints);
 
@@ -48,6 +52,8 @@ export function generateSpec(pr: PRData, repo: string): PromptSpec {
 		acceptance_criteria: acceptanceCriteria,
 		verification,
 		risk_flags: risks,
+		review_summary: reviewSummary,
+		monorepo,
 		open_questions: openQuestions,
 		generation_prompt: prompt,
 		stats: {

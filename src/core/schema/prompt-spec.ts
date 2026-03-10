@@ -54,6 +54,28 @@ export const PromptSpecSchema = z.object({
 	),
 	open_questions: z.array(z.string()),
 	generation_prompt: z.string(),
+	review_summary: z
+		.object({
+			total_comments: z.number(),
+			reviewers: z.array(z.string()),
+			approval_status: z.enum(["approved", "changes_requested", "pending", "mixed"]),
+			key_concerns: z.array(z.string()),
+			file_discussions: z.array(
+				z.object({
+					file: z.string(),
+					comment_count: z.number(),
+					topics: z.array(z.string()),
+				}),
+			),
+		})
+		.optional(),
+	monorepo: z
+		.object({
+			detected: z.boolean(),
+			affected_packages: z.array(z.string()),
+			workspace_root: z.string().optional(),
+		})
+		.optional(),
 	stats: z.object({
 		files_changed: z.number(),
 		additions: z.number(),
