@@ -120,6 +120,14 @@ describe("generateSpec", () => {
 		expect(spec.affected_files).toHaveLength(3);
 		expect(spec.affected_files[0].filename).toBe("src/middleware/rateLimit.ts");
 	});
+
+	it("generates a decision prompt", () => {
+		const spec = generateSpec(makePR(), "owner/repo");
+		expect(spec.decision_prompt.length).toBeGreaterThan(50);
+		expect(spec.decision_prompt).toContain("Decision Required");
+		expect(spec.decision_prompt).toContain("APPROVE");
+		expect(spec.decision_prompt).toContain("REQUEST_CHANGES");
+	});
 });
 
 describe("compactSpec", () => {

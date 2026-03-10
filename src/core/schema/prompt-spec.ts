@@ -54,6 +54,7 @@ export const PromptSpecSchema = z.object({
 	),
 	open_questions: z.array(z.string()),
 	generation_prompt: z.string(),
+	decision_prompt: z.string(),
 	review_summary: z
 		.object({
 			total_comments: z.number(),

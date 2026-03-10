@@ -52,6 +52,7 @@ const VALID_SPEC = {
 	],
 	open_questions: ["Should limits be configurable per plan?"],
 	generation_prompt: "Re-implement this change...",
+	decision_prompt: "Should this PR be approved?",
 	stats: {
 		files_changed: 3,
 		additions: 150,

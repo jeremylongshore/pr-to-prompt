@@ -22,6 +22,7 @@ export function generateSpec(pr: PRData, repo: string): PromptSpec {
 	const monorepo = detectMonorepo(pr.files);
 	const openQuestions = inferOpenQuestions(pr, risks);
 	const prompt = buildGenerationPrompt(pr, repo, likelyGoal, scope, constraints);
+	const decisionPrompt = buildDecisionPrompt(pr, repo, risks, constraints, changeType);
 
 	return {
 		version: 1,
@@ -59,6 +60,7 @@ export function generateSpec(pr: PRData, repo: string): PromptSpec {
 		monorepo,
 		open_questions: openQuestions,
 		generation_prompt: prompt,
+		decision_prompt: decisionPrompt,
 		stats: {
 			files_changed: pr.changed_files,
 			additions: pr.additions,
@@ -282,6 +284,56 @@ Author: @${pr.author}
 
 Implement this change following the repository's existing patterns and conventions.
 Ensure all tests pass after making the changes.`;
+}
+
+function buildDecisionPrompt(
+	pr: PRData,
+	repo: string,
+	risks: Array<{ category: string; severity: string; description: string }>,
+	constraints: string[],
+	changeType: string,
+): string {
+	const riskSection =
+		risks.length > 0
+			? risks
+					.map((r) => `- [${r.severity.toUpperCase()}] ${r.category}: ${r.description}`)
+					.join("\n")
+			: "No risk flags detected.";
+
+	const constraintSection = constraints.map((c) => `- ${c}`).join("\n");
+
+	return `You are reviewing PR #${pr.number} in ${repo}.
+
+## Decision Required
+Should this pull request be approved, request changes, or need more information?
+
+## PR Context
+- **Title:** ${pr.title}
+- **Author:** @${pr.author}
+- **Type:** ${changeType}
+- **Files changed:** ${pr.changed_files} (+${pr.additions}/-${pr.deletions})
+- **Branch:** ${pr.head_branch} → ${pr.base_branch}
+
+## Risk Assessment
+${riskSection}
+
+## Constraints to Verify
+${constraintSection}
+
+## Questions to Answer
+1. Does this change align with the repository's architecture and conventions?
+2. Are there any security implications not covered by the risk flags?
+3. Is the scope appropriate, or should this be split into smaller PRs?
+4. Are edge cases and error handling adequately addressed?
+5. Will this change be maintainable long-term?
+
+## Response Format
+Respond with one of:
+- **APPROVE** — Change is safe and well-implemented
+- **REQUEST_CHANGES** — Specific issues must be addressed (list them)
+- **NEEDS_INFO** — Cannot decide without additional context (list questions)
+
+Include a brief rationale (2-3 sentences) for your decision.`;
 }
 
 function capitalize(s: string): string {

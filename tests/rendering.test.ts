@@ -95,6 +95,12 @@ describe("renderMarkdown", () => {
 		expect(md).toContain("Files changed");
 		expect(md).toContain("+80");
 	});
+
+	it("includes decision prompt section", () => {
+		const spec = generateSpec(makePR(), "owner/repo");
+		const md = renderMarkdown(spec);
+		expect(md).toContain("## Decision Prompt");
+	});
 });
 
 describe("renderComment", () => {

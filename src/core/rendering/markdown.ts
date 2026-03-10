@@ -198,6 +198,13 @@ export function renderMarkdown(spec: PromptSpec): string {
 	lines.push("```");
 	lines.push("");
 
+	// Decision Prompt
+	lines.push("## Decision Prompt");
+	lines.push("```");
+	lines.push(spec.decision_prompt);
+	lines.push("```");
+	lines.push("");
+
 	return lines.join("\n");
 }
 
