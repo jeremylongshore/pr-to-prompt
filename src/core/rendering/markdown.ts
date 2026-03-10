@@ -64,6 +64,26 @@ export function renderMarkdown(spec: PromptSpec): string {
 	}
 	lines.push("");
 
+	// Semantic Changes
+	if (spec.semantic_changes && spec.semantic_changes.length > 0) {
+		lines.push("## Semantic Changes");
+		const grouped = new Map<string, typeof spec.semantic_changes>();
+		for (const c of spec.semantic_changes) {
+			const key = c.type;
+			const arr = grouped.get(key) ?? [];
+			arr.push(c);
+			grouped.set(key, arr);
+		}
+		for (const [type, items] of grouped) {
+			lines.push(`**${type}s:**`);
+			for (const item of items.slice(0, 10)) {
+				const icon = item.action === "added" ? "+" : item.action === "removed" ? "-" : "~";
+				lines.push(`- ${icon} \`${item.name}\` (${item.file})`);
+			}
+		}
+		lines.push("");
+	}
+
 	// Monorepo
 	if (spec.monorepo?.detected) {
 		lines.push("## Monorepo");

@@ -3,6 +3,7 @@ export { PromptSpecSchema, type PromptSpec, type FileChange } from "./core/schem
 export { createClient, fetchPR, type PRData, type PRFile } from "./core/github/client.js";
 export { generateSpec, compactSpec } from "./core/parsing/pr-parser.js";
 export { parseReviews, type ReviewSummary } from "./core/parsing/review-parser.js";
+export { analyzeSemanticDiff, type SemanticChange } from "./core/parsing/semantic-diff.js";
 export { detectMonorepo, type MonorepoInfo } from "./core/parsing/monorepo-detector.js";
 export { classifyRisks, type RiskFlag } from "./core/risk/classifier.js";
 export { renderYaml } from "./core/rendering/yaml.js";

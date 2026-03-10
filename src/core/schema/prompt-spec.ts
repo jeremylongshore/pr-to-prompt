@@ -69,6 +69,16 @@ export const PromptSpecSchema = z.object({
 			),
 		})
 		.optional(),
+	semantic_changes: z
+		.array(
+			z.object({
+				type: z.enum(["function", "class", "import", "export", "config", "type", "test", "other"]),
+				name: z.string(),
+				action: z.enum(["added", "removed", "modified"]),
+				file: z.string(),
+			}),
+		)
+		.optional(),
 	monorepo: z
 		.object({
 			detected: z.boolean(),

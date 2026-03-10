@@ -3,6 +3,7 @@ import { classifyRisks } from "../risk/classifier.js";
 import type { FileChange, PromptSpec } from "../schema/prompt-spec.js";
 import { detectMonorepo } from "./monorepo-detector.js";
 import { parseReviews } from "./review-parser.js";
+import { analyzeSemanticDiff } from "./semantic-diff.js";
 
 /**
  * Deterministic spec generation from PR metadata.
@@ -17,6 +18,7 @@ export function generateSpec(pr: PRData, repo: string): PromptSpec {
 	const verification = inferVerification(pr);
 	const risks = classifyRisks(pr.files);
 	const reviewSummary = parseReviews(pr);
+	const semanticChanges = analyzeSemanticDiff(pr.files);
 	const monorepo = detectMonorepo(pr.files);
 	const openQuestions = inferOpenQuestions(pr, risks);
 	const prompt = buildGenerationPrompt(pr, repo, likelyGoal, scope, constraints);
@@ -52,6 +54,7 @@ export function generateSpec(pr: PRData, repo: string): PromptSpec {
 		acceptance_criteria: acceptanceCriteria,
 		verification,
 		risk_flags: risks,
+		semantic_changes: semanticChanges.length > 0 ? semanticChanges : undefined,
 		review_summary: reviewSummary,
 		monorepo,
 		open_questions: openQuestions,
