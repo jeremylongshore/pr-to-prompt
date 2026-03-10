@@ -7,6 +7,7 @@ import { type AIEnhanceOptions, enhanceSpec } from "../core/ai/enhancer.js";
 import { createClient, fetchPR } from "../core/github/client.js";
 import { generateSpec } from "../core/parsing/pr-parser.js";
 import { renderComment } from "../core/rendering/comment.js";
+import { renderJson } from "../core/rendering/json.js";
 import { renderMarkdown } from "../core/rendering/markdown.js";
 import { renderYaml } from "../core/rendering/yaml.js";
 
@@ -19,7 +20,7 @@ program
 	.option("--out <directory>", "Output directory", "./output")
 	.option("--token <token>", "GitHub token (or set GITHUB_TOKEN env var)")
 	.option("--comment", "Post spec summary as a PR comment", false)
-	.option("--format <format>", "Output format: yaml, markdown, both", "both")
+	.option("--format <format>", "Output format: yaml, markdown, json, both", "both")
 	.option("--stdout", "Print to stdout instead of writing files", false)
 	.option("--ai-enhance", "Enhance spec with AI-generated insights", false)
 	.option("--ai-provider <provider>", "AI provider: anthropic, openai", "anthropic")
@@ -90,15 +91,24 @@ async function run(opts: CLIOptions): Promise<void> {
 
 	const yamlOutput = renderYaml(spec);
 	const mdOutput = renderMarkdown(spec);
+	const jsonOutput = renderJson(spec);
 
 	if (opts.stdout) {
-		if (opts.format === "yaml" || opts.format === "both") {
-			console.log("\n--- YAML ---\n");
-			console.log(yamlOutput);
-		}
-		if (opts.format === "markdown" || opts.format === "both") {
-			console.log("\n--- Markdown ---\n");
-			console.log(mdOutput);
+		if (opts.format === "json") {
+			process.stdout.write(`${jsonOutput}\n`);
+		} else {
+			if (opts.format === "yaml" || opts.format === "both") {
+				console.log("\n--- YAML ---\n");
+				console.log(yamlOutput);
+			}
+			if (opts.format === "markdown" || opts.format === "both") {
+				console.log("\n--- Markdown ---\n");
+				console.log(mdOutput);
+			}
+			if (opts.format === "both") {
+				console.log("\n--- JSON ---\n");
+				console.log(jsonOutput);
+			}
 		}
 	} else {
 		const outDir = resolve(opts.out);
@@ -106,6 +116,7 @@ async function run(opts: CLIOptions): Promise<void> {
 
 		const yamlPath = resolve(outDir, `pr-${opts.pr}.spec.yaml`);
 		const mdPath = resolve(outDir, `pr-${opts.pr}.summary.md`);
+		const jsonPath = resolve(outDir, `pr-${opts.pr}.spec.json`);
 
 		if (opts.format === "yaml" || opts.format === "both") {
 			writeFileSync(yamlPath, yamlOutput, "utf-8");
@@ -114,6 +125,10 @@ async function run(opts: CLIOptions): Promise<void> {
 		if (opts.format === "markdown" || opts.format === "both") {
 			writeFileSync(mdPath, mdOutput, "utf-8");
 			console.log(`  Written: ${mdPath}`);
+		}
+		if (opts.format === "json" || opts.format === "both") {
+			writeFileSync(jsonPath, jsonOutput, "utf-8");
+			console.log(`  Written: ${jsonPath}`);
 		}
 	}
 

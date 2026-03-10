@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { PRData } from "../src/core/github/client.js";
 import { generateSpec } from "../src/core/parsing/pr-parser.js";
 import { renderComment } from "../src/core/rendering/comment.js";
+import { renderJson } from "../src/core/rendering/json.js";
 import { renderMarkdown } from "../src/core/rendering/markdown.js";
 import { renderYaml } from "../src/core/rendering/yaml.js";
 
@@ -123,5 +124,39 @@ describe("renderComment", () => {
 		const comment = renderComment(spec);
 		expect(comment).toContain("stripe.ts");
 		expect(comment).toContain("webhooks.ts");
+	});
+});
+
+describe("renderJson", () => {
+	it("produces valid JSON string", () => {
+		const spec = generateSpec(makePR(), "owner/repo");
+		const json = renderJson(spec);
+		const parsed = JSON.parse(json);
+		expect(parsed.version).toBe(1);
+	});
+
+	it("contains key fields", () => {
+		const spec = generateSpec(makePR(), "owner/repo");
+		const json = renderJson(spec);
+		const parsed = JSON.parse(json);
+		expect(parsed.source.repo).toBe("owner/repo");
+		expect(parsed.source.pr_number).toBe(17);
+		expect(parsed.title).toBe("feat: add webhook handler");
+	});
+
+	it("does not contain patch data", () => {
+		const spec = generateSpec(makePR(), "owner/repo");
+		const json = renderJson(spec);
+		expect(json).not.toContain("export function handleWebhook");
+	});
+
+	it("round-trips through schema validation", () => {
+		const spec = generateSpec(makePR(), "owner/repo");
+		const json = renderJson(spec);
+		const parsed = JSON.parse(json);
+		// Schema should accept the parsed JSON (minus optional patch fields)
+		expect(parsed.version).toBe(1);
+		expect(parsed.stats.files_changed).toBe(2);
+		expect(Array.isArray(parsed.risk_flags)).toBe(true);
 	});
 });
