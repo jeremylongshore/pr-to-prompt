@@ -1,78 +1,66 @@
 # pr-to-prompt
 
-Convert GitHub pull requests into structured, reviewable **prompt-spec** artifacts.
+The agent-to-agent translation layer for pull requests.
 
-Give any PR to `pr-to-prompt` and get back a canonical specification that a maintainer can use to understand, review, and regenerate the change with their own AI tools.
+`pr-to-prompt` converts any GitHub PR into a structured **prompt-spec** — a canonical format that your AI agent can consume, evaluate, and act on. No MCP server needed. The CLI *is* the API.
 
 [![CI](https://github.com/jeremylongshore/pr-to-prompt/actions/workflows/ci.yml/badge.svg)](https://github.com/jeremylongshore/pr-to-prompt/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 ---
 
-## Why
-
-Pull requests are optimized for code review, not for understanding intent. When you want to:
-
-- **Re-implement** a contributor's change in your own style
-- **Understand** what a PR is really doing before merging
-- **Feed** a structured spec into Claude Code, Copilot, or another AI agent
-- **Audit** changes for risk without reading every diff line
-
-...you need a **prompt-spec**, not a raw diff.
-
 ## How It Works
 
 ```
-PR opened → pr-to-prompt analyzes metadata + diffs → generates structured YAML spec
+PR opened → pr-to-prompt → structured spec → your agent decides
 ```
 
-1. Fetches PR metadata, files, and diffs via GitHub API
-2. **Deterministically** classifies change type, risk flags, and scope (no LLM required)
-3. Generates a canonical YAML spec + Markdown summary
-4. Optionally posts a compact summary comment on the PR
+1. A contributor opens a PR
+2. `pr-to-prompt` fetches metadata, diffs, and reviews via GitHub API
+3. **Deterministically** generates a structured spec (no LLM required)
+4. Your agent consumes the spec and makes a review decision
 
-No AI key needed for core functionality. The spec is built from heuristics and templates.
+```bash
+# The complete agent pipeline — one line
+pr-to-prompt --repo owner/repo --pr 42 --json | your-agent review
+```
 
 ## Quick Start
 
-### CLI Usage
+### Agent Piping (recommended)
 
 ```bash
-# Clone and build
-git clone https://github.com/jeremylongshore/pr-to-prompt.git
-cd pr-to-prompt
-pnpm install
-pnpm build
+# Get the full spec as JSON — pipe to jq, your agent, or any tool
+pr-to-prompt --repo owner/repo --pr 42 --json | jq .
 
-# Generate a spec from any public PR
-GITHUB_TOKEN=ghp_your_token node dist/cli/index.js \
-  --repo octocat/hello-world \
-  --pr 42 \
-  --out ./output
+# Extract just the risk flags
+pr-to-prompt --repo owner/repo --pr 42 --json | jq '.risk_flags'
+
+# Extract a single field
+pr-to-prompt --repo owner/repo --pr 42 --field risk_flags --quiet
+
+# Check exit code: 0=clean, 1=error, 2=high-risk PR
+pr-to-prompt --repo owner/repo --pr 42 --json > /dev/null
+echo $?  # 2 if high-risk changes detected
+
+# Feed to Claude for review
+pr-to-prompt --repo owner/repo --pr 42 --json \
+  | claude --print "Review this PR spec and decide: approve, request changes, or needs info"
+```
+
+### File Output
+
+```bash
+# Generate all formats to a directory
+pr-to-prompt --repo owner/repo --pr 42 --out ./specs
 
 # Output:
-#   output/pr-42.spec.yaml
-#   output/pr-42.summary.md
+#   specs/pr-42.spec.yaml     — canonical YAML spec
+#   specs/pr-42.summary.md    — human-readable Markdown
+#   specs/pr-42.spec.json     — machine-readable JSON
 ```
 
-### CLI Options
-
-```
-Options:
-  --repo <owner/name>   GitHub repository (required)
-  --pr <number>         Pull request number (required)
-  --out <directory>     Output directory (default: ./output)
-  --token <token>       GitHub token (or set GITHUB_TOKEN env var)
-  --comment             Post spec summary as a PR comment
-  --format <format>     Output: yaml, markdown, both (default: both)
-  --stdout              Print to stdout instead of files
-  -V, --version         Show version
-  -h, --help            Show help
-```
-
-### GitHub Action Usage
-
-Add this workflow to any repository:
+### GitHub Action
 
 ```yaml
 # .github/workflows/pr-to-prompt.yml
@@ -92,11 +80,12 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Generate prompt-spec
-        uses: jeremylongshore/pr-to-prompt@v0.1.0
+        id: spec
+        uses: jeremylongshore/pr-to-prompt@main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           INPUT_COMMENT: "true"
-          INPUT_OUTPUT_DIR: .pr-to-prompt/specs
+          INPUT_FORMAT: "both"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -104,92 +93,171 @@ jobs:
           path: .pr-to-prompt/specs/
 ```
 
-### npm / npx Usage
+### npm / npx
 
 ```bash
-# Install globally
 npm install -g pr-to-prompt
-
-# Or run directly with npx
-npx pr-to-prompt --repo owner/name --pr 42 --out ./output
+# or
+npx pr-to-prompt --repo owner/repo --pr 42 --json
 ```
 
-## Sample Output
+## CLI Reference
 
-### Generated YAML Spec (truncated)
+```
+Options:
+  --repo <owner/name>      GitHub repository (required)
+  --pr <number>            Pull request number (required)
+  --out <directory>        Output directory (default: ./output)
+  --token <token>          GitHub token (or set GITHUB_TOKEN env var)
+  --format <format>        Output: yaml, markdown, json, both (default: both)
+  --stdout                 Print to stdout instead of files
+  --quiet                  Suppress logging, only output the spec (for piping)
+  --field <path>           Extract a single field (dot notation)
+  --json                   Shorthand for --format json --stdout --quiet
+  --comment                Post spec summary as a PR comment
+  --ai-enhance             Enhance spec with AI-generated insights
+  --ai-provider <provider> AI provider: anthropic, openai (default: anthropic)
+  --ai-model <model>       AI model override
+  -V, --version            Show version
+  -h, --help               Show help
+```
+
+### Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | Success — PR analyzed, no high-risk flags |
+| `1` | Error — invalid input, API failure, etc. |
+| `2` | Success — but high-risk changes detected |
+
+## The Prompt-Spec Format
+
+Every spec contains:
+
+| Field | Description |
+|-------|-------------|
+| `source` | PR metadata (repo, number, author, branches) |
+| `intent` | Inferred goal and change type (feature, bugfix, refactor, etc.) |
+| `scope` | Affected directories and glob patterns |
+| `affected_files` | File list with status and line counts |
+| `risk_flags` | Categorized risks with severity (high/medium/low) |
+| `constraints` | Rules the change must preserve |
+| `acceptance_criteria` | Verification checklist |
+| `generation_prompt` | Ready-to-use prompt for reimplementation |
+| `decision_prompt` | Ready-to-use prompt for review decisions |
+| `semantic_changes` | Extracted function/class/import changes |
+| `review_summary` | Reviewer comments and approval status |
+| `stats` | Files changed, additions, deletions, commits |
+
+### Sample JSON Spec (truncated)
+
+```json
+{
+  "version": 1,
+  "source": {
+    "repo": "owner/repo",
+    "pr_number": 42,
+    "author": "contributor"
+  },
+  "intent": {
+    "likely_goal": "Add tenant-aware API rate limiting to public routes",
+    "change_type": "feature"
+  },
+  "risk_flags": [
+    {
+      "category": "security-headers",
+      "description": "Changes to middleware (src/middleware/rateLimit.ts)",
+      "severity": "medium"
+    }
+  ],
+  "stats": {
+    "files_changed": 3,
+    "additions": 150,
+    "deletions": 10
+  }
+}
+```
+
+## Agent Integration Patterns
+
+### Bash: Automated Risk Gate
+
+```bash
+#!/bin/bash
+# Block merges on high-risk PRs
+pr-to-prompt --repo "$REPO" --pr "$PR_NUM" --json > /tmp/spec.json
+EXIT_CODE=$?
+
+if [ $EXIT_CODE -eq 2 ]; then
+  echo "High-risk PR detected. Routing to senior reviewer."
+  jq '.risk_flags[] | select(.severity == "high")' /tmp/spec.json
+  exit 1
+fi
+```
+
+### Claude Code: CLAUDE.md Integration
+
+Add this to your project's `CLAUDE.md`:
+
+```markdown
+## PR Review Protocol
+
+When asked to review a PR, use pr-to-prompt to generate the spec first:
+
+\`\`\`bash
+pr-to-prompt --repo owner/repo --pr <number> --json
+\`\`\`
+
+Evaluate the spec against these criteria:
+1. Do the risk flags indicate areas needing careful review?
+2. Does the intent align with the project roadmap?
+3. Are the constraints satisfied?
+4. Would you approve, request changes, or ask for more info?
+```
+
+### GitHub Action Chain: Spec to Another Action
 
 ```yaml
-version: 1
-source:
-  repo: octocat/hello-world
-  pr_number: 42
-  pr_url: https://github.com/octocat/hello-world/pull/42
-  base_branch: main
-  head_branch: feat/rate-limiting
-  author: contributor
-title: "feat: add rate limiting middleware"
-intent:
-  likely_goal: Add tenant-aware API rate limiting to public routes
-  change_type: feature
-scope:
-  include:
-    - src/middleware/**
-    - src/routes/**
-risk_flags:
-  - category: security-headers
-    description: Changes to middleware (src/middleware/rateLimit.ts)
-    severity: medium
-acceptance_criteria:
-  - Changes apply cleanly to main
-  - All existing tests pass
-  - Public routes enforce per-tenant rate limits
-generation_prompt: |
-  Re-implement the following change for the octocat/hello-world repository...
+- name: Generate spec
+  id: spec
+  uses: jeremylongshore/pr-to-prompt@main
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    INPUT_FORMAT: "json"
+
+- name: Feed to review agent
+  run: |
+    cat .pr-to-prompt/specs/pr-${{ github.event.pull_request.number }}.spec.json \
+      | your-review-tool --decide
 ```
 
-See full examples in [`examples/`](./examples/).
+## Risk Classification
 
-### PR Comment Preview
+Built-in heuristic rules flag changes to:
 
-The bot posts a compact, scannable comment:
-
-```
-## PR Spec Analysis
-
-**feature** | 3 files | +150/-10
-
-### Summary
-Add tenant-aware API rate limiting to public routes
-
-### Affected Files (3)
-- `src/middleware/rateLimit.ts` (added, +100/-0)
-- `src/routes/api.ts` (modified, +30/-5)
-- `tests/rateLimit.test.ts` (added, +20/-5)
-
-### Risk Flags
-- 🟡 **medium**: Changes to middleware (src/middleware/rateLimit.ts)
-
-### Acceptance Criteria
-- [ ] Changes apply cleanly to main
-- [ ] All existing tests pass
-
-📋 Copy-ready prompt spec (expandable)
-```
+| Category | Severity | Triggers |
+|----------|----------|----------|
+| `authentication` | **high** | Auth, login, session, OAuth, JWT files |
+| `secrets` | **high** | .env, .key, .pem, credentials files |
+| `database` | **high** | Migrations, .sql, schema files |
+| `permissions` | **high** | RBAC, ACL, policy files |
+| `payment` | **high** | Stripe, billing, subscription files |
+| `dependencies` | medium | Lockfiles, package managers |
+| `infrastructure` | medium | Docker, Terraform, k8s, deploy configs |
+| `destructive-operations` | medium | DROP TABLE, DELETE FROM in patches |
+| `security-config` | medium | CORS, CSP, security headers |
+| `large-change` | low | 300+ line changes in a single file |
 
 ## Environment Variables
 
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `GITHUB_TOKEN` | Yes | GitHub token with PR read access |
-| `ANTHROPIC_API_KEY` | No | For optional AI-enhanced summaries (v2) |
-| `PR_TO_PROMPT_AI_ENHANCE` | No | Enable AI enhancement (`true`/`false`) |
-
-### Token Scopes
+| `ANTHROPIC_API_KEY` | No | For AI-enhanced summaries |
+| `OPENAI_API_KEY` | No | Alternative AI provider |
 
 **Classic PAT:** `repo` (private repos) or `public_repo` (public only)
-
 **Fine-grained PAT:** `Pull requests: Read` + `Contents: Read`
-
 **GitHub Action:** Default `GITHUB_TOKEN` works — no additional secrets needed.
 
 ## Architecture
@@ -203,69 +271,38 @@ src/
     github/       Octokit-based PR data fetching
     parsing/      Deterministic spec generation from PR metadata
     risk/         Rule-based risk classification heuristics
-    rendering/    YAML, Markdown, and PR comment renderers
+    rendering/    YAML, Markdown, JSON, and PR comment renderers
+    ai/           Optional AI enhancement (Anthropic, OpenAI)
+    diff/         Spec version diffing
 ```
 
 ### Design Principles
 
-- **Deterministic first**: Core spec generation uses heuristics, not LLMs
-- **No execution**: Never runs code from PRs — metadata and diffs only
-- **Minimal trust surface**: Read-only by default, write only for optional PR comments
-- **Structured output**: Zod-validated schema ensures consistent, parseable specs
-
-### Risk Classification
-
-Built-in heuristic rules flag changes to:
-- Authentication/authorization logic
-- Secrets, config, environment files
-- Dependencies (package.json, lockfiles)
-- Database migrations/schemas
-- Infrastructure/deployment configs
-- Permission/role/RBAC logic
-- Payment/billing paths
-- Destructive operations (DROP, DELETE, etc.)
-- Large changesets (300+ line changes)
+- **Deterministic first**: Core spec uses heuristics, not LLMs. Reproducible and auditable.
+- **No execution**: Never runs code from PRs — metadata and diffs only.
+- **Agent-native**: JSON output, clean exit codes, field extraction. Built for piping.
+- **Minimal trust surface**: Read-only by default. Zod-validated output.
 
 ## Security
 
 See [SECURITY.md](./SECURITY.md) for the full security policy and threat model.
 
-Key points:
 - Never executes PR code
 - Treats contributor input as untrusted
 - Validates and sanitizes all output
-- Minimal dependency tree
-- Token scopes documented and minimized
+- Minimal dependency tree (4 runtime deps)
 
 ## Development
 
 ```bash
 pnpm install       # Install dependencies
 pnpm build         # Compile TypeScript
-pnpm test          # Run tests (42 tests)
+pnpm test          # Run tests
 pnpm lint          # Lint with Biome
 pnpm typecheck     # TypeScript strict check
 pnpm check         # All of the above
-pnpm dev           # Watch mode for development
+pnpm dev           # Watch mode
 ```
-
-## Roadmap
-
-### v1.1
-- [ ] Optional AI-enhanced summaries via Anthropic API (behind feature flag)
-- [ ] Semantic diff analysis for better intent extraction
-- [ ] Support for monorepo scope detection
-
-### v1.2
-- [ ] Published npm package (`npx pr-to-prompt`)
-- [ ] GitHub Marketplace action
-- [ ] Spec versioning and diff between spec versions
-
-### v2
-- [ ] GitHub App for zero-config installation
-- [ ] Spec storage and browsing UI
-- [ ] Team review workflows around specs
-- [ ] Integration with Claude Code, Cursor, and other AI tools
 
 ## License
 
