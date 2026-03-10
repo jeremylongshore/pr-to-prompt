@@ -1,5 +1,19 @@
 import { Octokit } from "@octokit/rest";
 
+export interface PRReviewComment {
+	author: string;
+	body: string;
+	path: string;
+	line: number | null;
+	created_at: string;
+}
+
+export interface PRReview {
+	author: string;
+	state: string;
+	body: string;
+}
+
 export interface PRData {
 	number: number;
 	title: string;
@@ -16,6 +30,8 @@ export interface PRData {
 	files: PRFile[];
 	labels: string[];
 	linked_issues: string[];
+	review_comments: PRReviewComment[];
+	reviews: PRReview[];
 }
 
 export interface PRFile {
@@ -37,9 +53,11 @@ export async function fetchPR(
 	repo: string,
 	prNumber: number,
 ): Promise<PRData> {
-	const [prResponse, filesResponse] = await Promise.all([
+	const [prResponse, filesResponse, commentsResponse, reviewsResponse] = await Promise.all([
 		octokit.pulls.get({ owner, repo, pull_number: prNumber }),
 		octokit.pulls.listFiles({ owner, repo, pull_number: prNumber, per_page: 300 }),
+		octokit.pulls.listReviewComments({ owner, repo, pull_number: prNumber, per_page: 100 }),
+		octokit.pulls.listReviews({ owner, repo, pull_number: prNumber, per_page: 50 }),
 	]);
 
 	const pr = prResponse.data;
@@ -70,6 +88,20 @@ export async function fetchPR(
 			patch: f.patch,
 			previous_filename: f.previous_filename,
 		})),
+		review_comments: commentsResponse.data.map((c) => ({
+			author: c.user?.login ?? "unknown",
+			body: c.body,
+			path: c.path,
+			line: c.line ?? null,
+			created_at: c.created_at,
+		})),
+		reviews: reviewsResponse.data
+			.filter((r) => r.state !== "PENDING")
+			.map((r) => ({
+				author: r.user?.login ?? "unknown",
+				state: r.state,
+				body: r.body ?? "",
+			})),
 	};
 }
 

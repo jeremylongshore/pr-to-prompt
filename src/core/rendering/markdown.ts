@@ -64,6 +64,59 @@ export function renderMarkdown(spec: PromptSpec): string {
 	}
 	lines.push("");
 
+	// Semantic Changes
+	if (spec.semantic_changes && spec.semantic_changes.length > 0) {
+		lines.push("## Semantic Changes");
+		const grouped = new Map<string, typeof spec.semantic_changes>();
+		for (const c of spec.semantic_changes) {
+			const key = c.type;
+			const arr = grouped.get(key) ?? [];
+			arr.push(c);
+			grouped.set(key, arr);
+		}
+		for (const [type, items] of grouped) {
+			lines.push(`**${type}s:**`);
+			for (const item of items.slice(0, 10)) {
+				const icon = item.action === "added" ? "+" : item.action === "removed" ? "-" : "~";
+				lines.push(`- ${icon} \`${item.name}\` (${item.file})`);
+			}
+		}
+		lines.push("");
+	}
+
+	// Monorepo
+	if (spec.monorepo?.detected) {
+		lines.push("## Monorepo");
+		lines.push(`**Affected packages:** ${spec.monorepo.affected_packages.join(", ")}`);
+		if (spec.monorepo.workspace_root) {
+			lines.push(`**Workspace root:** ${spec.monorepo.workspace_root}`);
+		}
+		lines.push("");
+	}
+
+	// Review Summary
+	if (spec.review_summary) {
+		lines.push("## Review Summary");
+		lines.push(`- **Status:** ${spec.review_summary.approval_status}`);
+		lines.push(`- **Reviewers:** ${spec.review_summary.reviewers.join(", ") || "none"}`);
+		lines.push(`- **Comments:** ${spec.review_summary.total_comments}`);
+		if (spec.review_summary.key_concerns.length > 0) {
+			lines.push("");
+			lines.push("**Key Concerns:**");
+			for (const c of spec.review_summary.key_concerns.slice(0, 5)) {
+				lines.push(`- ${c}`);
+			}
+		}
+		if (spec.review_summary.file_discussions.length > 0) {
+			lines.push("");
+			lines.push("**Most Discussed Files:**");
+			for (const fd of spec.review_summary.file_discussions.slice(0, 5)) {
+				lines.push(`- \`${fd.file}\` (${fd.comment_count} comments)`);
+			}
+		}
+		lines.push("");
+	}
+
 	// Risk Flags
 	if (spec.risk_flags.length > 0) {
 		lines.push("## Risk Flags");

@@ -21,6 +21,8 @@ function makePR(): PRData {
 		changed_files: 2,
 		labels: [],
 		linked_issues: [],
+		review_comments: [],
+		reviews: [],
 		files: [
 			{
 				filename: "src/webhooks/stripe.ts",
@@ -56,10 +58,11 @@ describe("renderYaml", () => {
 		expect(yaml).toContain("feat: add webhook handler");
 	});
 
-	it("does not contain patch data", () => {
+	it("does not contain patch data in affected_files", () => {
 		const spec = generateSpec(makePR(), "owner/repo");
 		const yaml = renderYaml(spec);
-		expect(yaml).not.toContain("handleWebhook");
+		// YAML renderer strips patch field from affected_files
+		expect(yaml).not.toContain("export function handleWebhook");
 	});
 });
 

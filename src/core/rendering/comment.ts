@@ -30,6 +30,20 @@ export function renderComment(spec: PromptSpec): string {
 	}
 	lines.push("");
 
+	// Monorepo info
+	if (spec.monorepo?.detected) {
+		lines.push(`**Monorepo:** ${spec.monorepo.affected_packages.join(", ")}`);
+		lines.push("");
+	}
+
+	// Review status
+	if (spec.review_summary) {
+		lines.push(
+			`**Review:** ${spec.review_summary.approval_status} (${spec.review_summary.total_comments} comments from ${spec.review_summary.reviewers.length} reviewers)`,
+		);
+		lines.push("");
+	}
+
 	// Risk flags
 	if (spec.risk_flags.length > 0) {
 		lines.push("### Risk Flags");
