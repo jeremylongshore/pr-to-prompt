@@ -33,6 +33,10 @@ inputs:
   ai_model:
     description: "Override the default AI model"
     required: false
+  format:
+    description: "Output format: yaml, markdown, json, both"
+    required: false
+    default: "both"
 
 outputs:
   spec_yaml_path:
@@ -45,6 +49,8 @@ outputs:
     description: "Number of files changed in the PR"
   risk_count:
     description: "Number of risk flags identified"
+  spec_json_path:
+    description: "Path to the generated JSON spec"
 
 runs:
   using: "node20"

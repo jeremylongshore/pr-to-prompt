@@ -9,6 +9,7 @@ import { type AIEnhanceOptions, enhanceSpec } from "../core/ai/enhancer.js";
 import { createClient, fetchPR } from "../core/github/client.js";
 import { generateSpec } from "../core/parsing/pr-parser.js";
 import { renderComment } from "../core/rendering/comment.js";
+import { renderJson } from "../core/rendering/json.js";
 import { renderMarkdown } from "../core/rendering/markdown.js";
 import { renderYaml } from "../core/rendering/yaml.js";
 
@@ -16,6 +17,7 @@ interface ActionInputs {
 	token: string;
 	comment: boolean;
 	outputDir: string;
+	format: string;
 	aiEnhance: boolean;
 	aiProvider: "anthropic" | "openai";
 	aiApiKey: string;
@@ -28,6 +30,7 @@ function getInputs(): ActionInputs {
 		token: process.env.GITHUB_TOKEN ?? process.env.INPUT_GITHUB_TOKEN ?? "",
 		comment: (process.env.INPUT_COMMENT ?? "true") === "true",
 		outputDir: process.env.INPUT_OUTPUT_DIR ?? ".pr-to-prompt/specs",
+		format: process.env.INPUT_FORMAT ?? "both",
 		aiEnhance: (process.env.INPUT_AI_ENHANCE ?? "false") === "true",
 		aiProvider,
 		aiApiKey:
@@ -87,6 +90,7 @@ async function main(): Promise<void> {
 
 	const yamlOutput = renderYaml(spec);
 	const mdOutput = renderMarkdown(spec);
+	const jsonOutput = renderJson(spec);
 	console.log("::endgroup::");
 
 	// Write output files
@@ -96,16 +100,26 @@ async function main(): Promise<void> {
 
 	const yamlPath = resolve(outDir, `pr-${prNumber}.spec.yaml`);
 	const mdPath = resolve(outDir, `pr-${prNumber}.summary.md`);
+	const jsonPath = resolve(outDir, `pr-${prNumber}.spec.json`);
 
-	writeFileSync(yamlPath, yamlOutput, "utf-8");
-	writeFileSync(mdPath, mdOutput, "utf-8");
-	console.log(`Written: ${yamlPath}`);
-	console.log(`Written: ${mdPath}`);
+	if (inputs.format === "yaml" || inputs.format === "both") {
+		writeFileSync(yamlPath, yamlOutput, "utf-8");
+		console.log(`Written: ${yamlPath}`);
+	}
+	if (inputs.format === "markdown" || inputs.format === "both") {
+		writeFileSync(mdPath, mdOutput, "utf-8");
+		console.log(`Written: ${mdPath}`);
+	}
+	if (inputs.format === "json" || inputs.format === "both") {
+		writeFileSync(jsonPath, jsonOutput, "utf-8");
+		console.log(`Written: ${jsonPath}`);
+	}
 	console.log("::endgroup::");
 
 	// Set action outputs
 	setOutput("spec_yaml_path", yamlPath);
 	setOutput("spec_md_path", mdPath);
+	setOutput("spec_json_path", jsonPath);
 	setOutput("pr_number", String(prNumber));
 	setOutput("files_changed", String(spec.stats.files_changed));
 	setOutput("risk_count", String(spec.risk_flags.length));
