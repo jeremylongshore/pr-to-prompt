@@ -12,6 +12,7 @@ import { renderComment } from "../core/rendering/comment.js";
 import { renderJson } from "../core/rendering/json.js";
 import { renderMarkdown } from "../core/rendering/markdown.js";
 import { renderYaml } from "../core/rendering/yaml.js";
+import type { PromptSpec } from "../core/schema/prompt-spec.js";
 
 interface ActionInputs {
 	token: string;
@@ -22,6 +23,7 @@ interface ActionInputs {
 	aiProvider: "anthropic" | "openai";
 	aiApiKey: string;
 	aiModel?: string;
+	webhookUrl: string;
 }
 
 function getInputs(): ActionInputs {
@@ -38,6 +40,7 @@ function getInputs(): ActionInputs {
 			(aiProvider === "openai" ? process.env.OPENAI_API_KEY : process.env.ANTHROPIC_API_KEY) ??
 			"",
 		aiModel: process.env.INPUT_AI_MODEL || undefined,
+		webhookUrl: process.env.INPUT_WEBHOOK_URL ?? "",
 	};
 }
 
@@ -57,6 +60,36 @@ function getEventPayload(): { owner: string; repo: string; prNumber: number } {
 	}
 
 	return { owner, repo, prNumber };
+}
+
+async function sendWebhook(
+	url: string,
+	spec: PromptSpec,
+	repo: string,
+	prNumber: number,
+): Promise<void> {
+	const payload = JSON.stringify({
+		event: "spec_generated",
+		repo,
+		pr_number: prNumber,
+		spec,
+		generated_at: spec.generated_at,
+	});
+
+	const response = await fetch(url, {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			"User-Agent": "pr-to-prompt/0.1.0",
+		},
+		body: payload,
+	});
+
+	if (!response.ok) {
+		console.warn(`::warning::Webhook POST to ${url} failed with status ${response.status}`);
+	} else {
+		console.log(`Webhook delivered to ${url} (${response.status})`);
+	}
 }
 
 async function main(): Promise<void> {
@@ -123,6 +156,13 @@ async function main(): Promise<void> {
 	setOutput("pr_number", String(prNumber));
 	setOutput("files_changed", String(spec.stats.files_changed));
 	setOutput("risk_count", String(spec.risk_flags.length));
+
+	// Send webhook
+	if (inputs.webhookUrl) {
+		console.log("::group::Sending webhook notification");
+		await sendWebhook(inputs.webhookUrl, spec, repoFull, prNumber);
+		console.log("::endgroup::");
+	}
 
 	// Post comment
 	if (inputs.comment) {

@@ -37,6 +37,9 @@ inputs:
     description: "Output format: yaml, markdown, json, both"
     required: false
     default: "both"
+  webhook_url:
+    description: "URL to POST the JSON spec to when generation completes"
+    required: false
 
 outputs:
   spec_yaml_path:
