@@ -9,5 +9,5 @@ export { detectMonorepo, type MonorepoInfo } from "./core/parsing/monorepo-detec
 export { classifyRisks, type RiskFlag } from "./core/risk/classifier.js";
 export { renderYaml } from "./core/rendering/yaml.js";
 export { renderMarkdown } from "./core/rendering/markdown.js";
-export { renderJson } from "./core/rendering/json.js";
 export { renderComment } from "./core/rendering/comment.js";
+export { renderJson } from "./core/rendering/json.js";

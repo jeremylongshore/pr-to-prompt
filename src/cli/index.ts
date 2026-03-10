@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { mkdirSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { resolve } from "node:path";
 import { program } from "commander";
 import { type AIEnhanceOptions, enhanceSpec } from "../core/ai/enhancer.js";
 import { createClient, fetchPR } from "../core/github/client.js";
@@ -22,15 +22,21 @@ program
 	.option("--comment", "Post spec summary as a PR comment", false)
 	.option("--format <format>", "Output format: yaml, markdown, json, both", "both")
 	.option("--stdout", "Print to stdout instead of writing files", false)
+	.option("--quiet", "Suppress all logging, only output the spec (for piping)", false)
+	.option("--field <path>", "Extract a single field from the spec (dot notation)")
+	.option("--json", "Shorthand for --format json --stdout --quiet", false)
 	.option("--ai-enhance", "Enhance spec with AI-generated insights", false)
 	.option("--ai-provider <provider>", "AI provider: anthropic, openai", "anthropic")
 	.option("--ai-model <model>", "AI model override")
 	.action(async (opts) => {
 		try {
-			await run(opts);
+			const exitCode = await run(opts);
+			process.exit(exitCode);
 		} catch (err) {
 			const message = err instanceof Error ? err.message : String(err);
-			console.error(`Error: ${message}`);
+			if (!opts.quiet && !opts.json) {
+				console.error(`Error: ${message}`);
+			}
 			process.exit(1);
 		}
 	});
@@ -43,12 +49,28 @@ interface CLIOptions {
 	comment: boolean;
 	format: string;
 	stdout: boolean;
+	quiet: boolean;
+	field?: string;
+	json: boolean;
 	aiEnhance: boolean;
 	aiProvider: string;
 	aiModel?: string;
 }
 
-async function run(opts: CLIOptions): Promise<void> {
+function log(opts: CLIOptions, ...args: unknown[]): void {
+	if (!opts.quiet && !opts.json) {
+		console.log(...args);
+	}
+}
+
+async function run(opts: CLIOptions): Promise<number> {
+	// --json is shorthand for --format json --stdout --quiet
+	if (opts.json) {
+		opts.format = "json";
+		opts.stdout = true;
+		opts.quiet = true;
+	}
+
 	const token = opts.token ?? process.env.GITHUB_TOKEN;
 	if (!token) {
 		throw new Error(
@@ -65,11 +87,11 @@ async function run(opts: CLIOptions): Promise<void> {
 		throw new Error("PR number must be a positive integer");
 	}
 
-	console.log(`Fetching PR #${opts.pr} from ${opts.repo}...`);
+	log(opts, `Fetching PR #${opts.pr} from ${opts.repo}...`);
 	const octokit = createClient(token);
 	const prData = await fetchPR(octokit, owner, repo, opts.pr);
 
-	console.log(`Generating prompt-spec for: "${prData.title}"`);
+	log(opts, `Generating prompt-spec for: "${prData.title}"`);
 	let spec = generateSpec(prData, opts.repo);
 
 	if (opts.aiEnhance) {
@@ -79,14 +101,25 @@ async function run(opts: CLIOptions): Promise<void> {
 				`AI enhancement requires an API key. Set ${opts.aiProvider === "openai" ? "OPENAI_API_KEY" : "ANTHROPIC_API_KEY"} env var.`,
 			);
 		}
-		console.log(`Enhancing with AI (${opts.aiProvider})...`);
+		log(opts, `Enhancing with AI (${opts.aiProvider})...`);
 		const aiOpts: AIEnhanceOptions = {
 			provider: opts.aiProvider as "anthropic" | "openai",
 			apiKey: aiKey,
 			model: opts.aiModel,
 		};
 		spec = await enhanceSpec(spec, aiOpts);
-		console.log("  AI enhancement complete.");
+		log(opts, "  AI enhancement complete.");
+	}
+
+	// --field: extract a single field and output it
+	if (opts.field) {
+		const value = extractField(spec, opts.field);
+		if (value === undefined) {
+			throw new Error(`Field "${opts.field}" not found in spec`);
+		}
+		const output = typeof value === "string" ? value : JSON.stringify(value, null, 2);
+		process.stdout.write(`${output}\n`);
+		return 0;
 	}
 
 	const yamlOutput = renderYaml(spec);
@@ -96,19 +129,20 @@ async function run(opts: CLIOptions): Promise<void> {
 	if (opts.stdout) {
 		if (opts.format === "json") {
 			process.stdout.write(`${jsonOutput}\n`);
+		} else if (opts.format === "yaml") {
+			if (!opts.quiet) console.log("\n--- YAML ---\n");
+			process.stdout.write(`${yamlOutput}\n`);
+		} else if (opts.format === "markdown") {
+			if (!opts.quiet) console.log("\n--- Markdown ---\n");
+			process.stdout.write(`${mdOutput}\n`);
 		} else {
-			if (opts.format === "yaml" || opts.format === "both") {
-				console.log("\n--- YAML ---\n");
-				console.log(yamlOutput);
-			}
-			if (opts.format === "markdown" || opts.format === "both") {
-				console.log("\n--- Markdown ---\n");
-				console.log(mdOutput);
-			}
-			if (opts.format === "both") {
-				console.log("\n--- JSON ---\n");
-				console.log(jsonOutput);
-			}
+			// "both" — all formats with separators
+			if (!opts.quiet) console.log("\n--- YAML ---\n");
+			process.stdout.write(`${yamlOutput}\n`);
+			if (!opts.quiet) console.log("\n--- Markdown ---\n");
+			process.stdout.write(`${mdOutput}\n`);
+			if (!opts.quiet) console.log("\n--- JSON ---\n");
+			process.stdout.write(`${jsonOutput}\n`);
 		}
 	} else {
 		const outDir = resolve(opts.out);
@@ -120,20 +154,20 @@ async function run(opts: CLIOptions): Promise<void> {
 
 		if (opts.format === "yaml" || opts.format === "both") {
 			writeFileSync(yamlPath, yamlOutput, "utf-8");
-			console.log(`  Written: ${yamlPath}`);
+			log(opts, `  Written: ${yamlPath}`);
 		}
 		if (opts.format === "markdown" || opts.format === "both") {
 			writeFileSync(mdPath, mdOutput, "utf-8");
-			console.log(`  Written: ${mdPath}`);
+			log(opts, `  Written: ${mdPath}`);
 		}
 		if (opts.format === "json" || opts.format === "both") {
 			writeFileSync(jsonPath, jsonOutput, "utf-8");
-			console.log(`  Written: ${jsonPath}`);
+			log(opts, `  Written: ${jsonPath}`);
 		}
 	}
 
 	if (opts.comment) {
-		console.log("Posting PR comment...");
+		log(opts, "Posting PR comment...");
 		const commentBody = renderComment(spec);
 		await octokit.issues.createComment({
 			owner,
@@ -141,10 +175,30 @@ async function run(opts: CLIOptions): Promise<void> {
 			issue_number: opts.pr,
 			body: commentBody,
 		});
-		console.log(`  Comment posted on PR #${opts.pr}`);
+		log(opts, `  Comment posted on PR #${opts.pr}`);
 	}
 
-	console.log("Done.");
+	log(opts, "Done.");
+
+	// Exit code 2 if high-risk PR detected
+	const hasHighRisk = spec.risk_flags.some((r) => r.severity === "high");
+	return hasHighRisk ? 2 : 0;
+}
+
+/**
+ * Extract a nested field from the spec using dot notation.
+ * e.g., "risk_flags" -> spec.risk_flags, "source.author" -> spec.source.author
+ */
+function extractField(obj: Record<string, unknown>, path: string): unknown {
+	const parts = path.split(".");
+	let current: unknown = obj;
+	for (const part of parts) {
+		if (current === null || current === undefined || typeof current !== "object") {
+			return undefined;
+		}
+		current = (current as Record<string, unknown>)[part];
+	}
+	return current;
 }
 
 function resolveAIKey(provider: string): string | undefined {
