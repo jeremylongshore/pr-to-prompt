@@ -16,3 +16,5 @@ export { buildLocalDiffSource, parseDiffStat, parseNameStatus } from "./core/sou
 export type { DiffSource, DiffFile } from "./core/sources/types.js";
 export { IntentSchema, type Intent } from "./core/intent/schema.js";
 export { readIntent, writeIntent } from "./core/intent/storage.js";
+export { detectDrift, detectDriftWithSpec } from "./core/drift/detector.js";
+export type { DriftSignal, DriftSignalType } from "./core/drift/signals.js";

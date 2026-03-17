@@ -102,6 +102,32 @@ export const PromptSpecSchema = z.object({
 			provider: z.string(),
 		})
 		.optional(),
+	drift_signals: z
+		.array(
+			z.object({
+				type: z.enum([
+					"scope_creep",
+					"forbidden_touch",
+					"risk_escalation",
+					"size_overrun",
+					"type_mismatch",
+				]),
+				description: z.string(),
+				severity: z.enum(["low", "medium", "high"]),
+				details: z.array(z.string()).optional(),
+			}),
+		)
+		.optional(),
+	declared_intent: z
+		.object({
+			goal: z.string(),
+			expected_scope: z.array(z.string()),
+			forbidden_scope: z.array(z.string()),
+			max_risk: z.enum(["low", "medium", "high"]),
+			expected_type: z.string().optional(),
+			size_budget: z.number().optional(),
+		})
+		.optional(),
 });
 
 export type PromptSpec = z.infer<typeof PromptSpecSchema>;
