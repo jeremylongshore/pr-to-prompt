@@ -18,3 +18,5 @@ export { IntentSchema, type Intent } from "./core/intent/schema.js";
 export { readIntent, writeIntent } from "./core/intent/storage.js";
 export { detectDrift, detectDriftWithSpec } from "./core/drift/detector.js";
 export type { DriftSignal, DriftSignalType } from "./core/drift/signals.js";
+export { buildEnvelope } from "./core/protocol/envelope.js";
+export type { AgentProtocolEnvelope, ProtocolStatus } from "./core/protocol/envelope.js";

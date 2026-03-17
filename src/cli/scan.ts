@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { Command } from "commander";
 import { generateSpec } from "../core/parsing/pr-parser.js";
+import { buildEnvelope } from "../core/protocol/envelope.js";
 import { renderJson } from "../core/rendering/json.js";
 import { renderMarkdown } from "../core/rendering/markdown.js";
 import { renderYaml } from "../core/rendering/yaml.js";
@@ -80,7 +81,9 @@ async function runScan(opts: ScanOptions): Promise<number> {
 		return 0;
 	}
 
-	const jsonOutput = renderJson(spec);
+	const jsonOutput = opts.json
+		? JSON.stringify(buildEnvelope("scan", spec), null, 2)
+		: renderJson(spec);
 	const yamlOutput = renderYaml(spec);
 	const mdOutput = renderMarkdown(spec);
 

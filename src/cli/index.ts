@@ -6,6 +6,7 @@ import { program } from "commander";
 import { type AIEnhanceOptions, enhanceSpec } from "../core/ai/enhancer.js";
 import { createClient, fetchPR } from "../core/github/client.js";
 import { generateSpecFromPR } from "../core/parsing/pr-parser.js";
+import { buildEnvelope } from "../core/protocol/envelope.js";
 import { renderComment } from "../core/rendering/comment.js";
 import { renderJson } from "../core/rendering/json.js";
 import { renderMarkdown } from "../core/rendering/markdown.js";
@@ -127,7 +128,9 @@ async function run(opts: CLIOptions): Promise<number> {
 
 	const yamlOutput = renderYaml(spec);
 	const mdOutput = renderMarkdown(spec);
-	const jsonOutput = renderJson(spec);
+	const jsonOutput = opts.json
+		? JSON.stringify(buildEnvelope("analyze", spec), null, 2)
+		: renderJson(spec);
 
 	if (opts.stdout) {
 		if (opts.format === "json") {
