@@ -2,6 +2,7 @@ import { Command } from "commander";
 import { detectDriftWithSpec } from "../core/drift/detector.js";
 import { readIntent } from "../core/intent/storage.js";
 import { generateSpec } from "../core/parsing/pr-parser.js";
+import { buildEnvelope } from "../core/protocol/envelope.js";
 import { renderJson } from "../core/rendering/json.js";
 import { buildLocalDiffSource } from "../core/sources/local.js";
 
@@ -47,8 +48,11 @@ async function runCheck(opts: {
 
 	if (!intent) {
 		log(opts, 'No intent declared. Run: pr-to-spec intent set --goal "..."');
-		// Fall back to scan behavior
-		if (opts.json) process.stdout.write(`${renderJson(spec)}\n`);
+		// Fall back to scan behavior — use envelope if --json
+		if (opts.json) {
+			const envelope = buildEnvelope("check", spec);
+			process.stdout.write(`${JSON.stringify(envelope, null, 2)}\n`);
+		}
 		const hasHighRisk = spec.risk_flags.some((r) => r.severity === "high");
 		return hasHighRisk ? 2 : 0;
 	}
@@ -57,26 +61,8 @@ async function runCheck(opts: {
 	const signals = detectDriftWithSpec(source, intent, spec.intent.change_type, spec.risk_flags);
 
 	if (opts.json) {
-		const output = JSON.stringify(
-			{
-				version: 1,
-				command: "check",
-				status:
-					signals.length > 0
-						? "drift_detected"
-						: spec.risk_flags.some((r) => r.severity === "high")
-							? "high_risk"
-							: "clean",
-				exit_code:
-					signals.length > 0 ? 3 : spec.risk_flags.some((r) => r.severity === "high") ? 2 : 0,
-				signals,
-				spec,
-				intent,
-			},
-			null,
-			2,
-		);
-		process.stdout.write(`${output}\n`);
+		const envelope = buildEnvelope("check", spec, { signals, intent });
+		process.stdout.write(`${JSON.stringify(envelope, null, 2)}\n`);
 	} else {
 		if (signals.length === 0) {
 			console.log("No drift detected.");
