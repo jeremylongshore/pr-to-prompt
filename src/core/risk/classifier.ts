@@ -1,16 +1,22 @@
-import type { PRFile } from "../github/client.js";
-
 export interface RiskFlag {
 	category: string;
 	description: string;
 	severity: "low" | "medium" | "high";
 }
 
+/** Minimal file shape required by the risk classifier */
+interface RiskFile {
+	filename: string;
+	additions: number;
+	deletions: number;
+	patch?: string;
+}
+
 interface RiskRule {
 	category: string;
 	description: string;
 	severity: "low" | "medium" | "high";
-	match: (file: PRFile) => boolean;
+	match: (file: RiskFile) => boolean;
 }
 
 /** Paths that are never risky (docs, tests, examples, generated files) */
@@ -118,7 +124,7 @@ const RISK_RULES: RiskRule[] = [
 	},
 ];
 
-export function classifyRisks(files: PRFile[]): RiskFlag[] {
+export function classifyRisks(files: RiskFile[]): RiskFlag[] {
 	const flags: RiskFlag[] = [];
 	const seen = new Set<string>();
 

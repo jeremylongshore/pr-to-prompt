@@ -1,5 +1,3 @@
-import type { PRFile } from "../github/client.js";
-
 export interface SemanticChange {
 	type: "function" | "class" | "import" | "export" | "config" | "type" | "test" | "other";
 	name: string;
@@ -7,12 +5,18 @@ export interface SemanticChange {
 	file: string;
 }
 
+/** Minimal file shape required by semantic diff analysis */
+interface SemanticFile {
+	filename: string;
+	patch?: string;
+}
+
 /**
  * Extract semantic meaning from diffs — identifies functions, classes,
  * imports, exports, and config changes from patch data.
  * Deterministic heuristic analysis, no AST parsing needed.
  */
-export function analyzeSemanticDiff(files: PRFile[]): SemanticChange[] {
+export function analyzeSemanticDiff(files: SemanticFile[]): SemanticChange[] {
 	const changes: SemanticChange[] = [];
 
 	for (const file of files) {

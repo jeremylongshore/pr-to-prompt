@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 import { program } from "commander";
 import { type AIEnhanceOptions, enhanceSpec } from "../core/ai/enhancer.js";
 import { createClient, fetchPR } from "../core/github/client.js";
-import { generateSpec } from "../core/parsing/pr-parser.js";
+import { generateSpecFromPR } from "../core/parsing/pr-parser.js";
 import { renderComment } from "../core/rendering/comment.js";
 import { renderJson } from "../core/rendering/json.js";
 import { renderMarkdown } from "../core/rendering/markdown.js";
@@ -92,7 +92,7 @@ async function run(opts: CLIOptions): Promise<number> {
 	const prData = await fetchPR(octokit, owner, repo, opts.pr);
 
 	log(opts, `Generating prompt-spec for: "${prData.title}"`);
-	let spec = generateSpec(prData, opts.repo);
+	let spec = generateSpecFromPR(prData, opts.repo);
 
 	if (opts.aiEnhance) {
 		const aiKey = resolveAIKey(opts.aiProvider);

@@ -13,8 +13,8 @@ export const PromptSpecSchema = z.object({
 	generated_at: z.string().datetime(),
 	source: z.object({
 		repo: z.string(),
-		pr_number: z.number(),
-		pr_url: z.string().url(),
+		pr_number: z.number().optional(),
+		pr_url: z.string().url().optional(),
 		base_branch: z.string(),
 		head_branch: z.string(),
 		author: z.string(),
