@@ -1,8 +1,17 @@
 export { enhanceSpec, type AIEnhanceOptions } from "./core/ai/enhancer.js";
-export { diffSpecs, type SpecDiff, type SectionDiff } from "./core/diff/spec-diff.js";
-export { PromptSpecSchema, type PromptSpec, type FileChange } from "./core/schema/prompt-spec.js";
+export { diffSpecs, diffFragments, type SpecDiff, type SectionDiff, type FragmentDiff } from "./core/diff/spec-diff.js";
+export {
+	PromptSpecSchema,
+	SpecFragmentSchema,
+	computeContentHash,
+	computeFragmentId,
+	stableStringify,
+	type PromptSpec,
+	type FileChange,
+	type SpecFragment,
+} from "./core/schema/prompt-spec.js";
 export { createClient, fetchPR, type PRData, type PRFile } from "./core/github/client.js";
-export { generateSpec, generateSpecFromPR, compactSpec } from "./core/parsing/pr-parser.js";
+export { generateSpec, generateSpecFromPR, compactSpec, decomposeIntoFragments } from "./core/parsing/pr-parser.js";
 export { parseReviews, type ReviewSummary } from "./core/parsing/review-parser.js";
 export { analyzeSemanticDiff, type SemanticChange } from "./core/parsing/semantic-diff.js";
 export { detectMonorepo, type MonorepoInfo } from "./core/parsing/monorepo-detector.js";
