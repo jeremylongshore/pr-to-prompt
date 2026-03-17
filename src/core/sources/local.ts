@@ -49,7 +49,7 @@ export function parseNameStatus(
 			C: "copied",
 		};
 		const status = statusMap[statusChar] ?? "modified";
-		if (statusChar === "R" && parts[2]) {
+		if ((statusChar === "R" || statusChar === "C") && parts[2]) {
 			files.push({ filename: parts[2], status, previous_filename: parts[1] });
 		} else {
 			files.push({ filename: parts[1] ?? parts[0], status });

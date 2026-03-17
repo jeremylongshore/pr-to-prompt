@@ -1,4 +1,4 @@
-import { mkdirSync, rmSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -123,5 +123,61 @@ describe("Intent storage round-trip", () => {
 		writeIntent(intent2, tmpDir);
 		const loaded = readIntent(tmpDir);
 		expect(loaded?.goal).toBe("Second goal");
+	});
+
+	it("writeIntent creates the .pr-to-spec directory if it does not exist", () => {
+		const nestedDir = join(tmpDir, "new-project");
+		// nestedDir does not exist yet
+		const intent = IntentSchema.parse({ goal: "Create dir test" });
+		// Should not throw
+		expect(() => writeIntent(intent, nestedDir)).not.toThrow();
+		const loaded = readIntent(nestedDir);
+		expect(loaded?.goal).toBe("Create dir test");
+	});
+
+	it("readIntent throws on corrupt YAML that fails schema validation", () => {
+		// Write a YAML file with an invalid intent (empty goal violates min(1))
+		const intentDir = join(tmpDir, "corrupt-test", ".pr-to-spec");
+		mkdirSync(intentDir, { recursive: true });
+		writeFileSync(join(intentDir, "intent.yaml"), 'goal: ""\n', "utf-8");
+		// readIntent should throw because goal is empty (fails schema validation)
+		expect(() => readIntent(join(tmpDir, "corrupt-test"))).toThrow();
+	});
+
+	it("written YAML file contains the goal field", () => {
+		const intent = IntentSchema.parse({ goal: "Inspect file contents" });
+		writeIntent(intent, tmpDir);
+		const raw = readFileSync(getIntentPath(tmpDir), "utf-8");
+		expect(raw).toContain("Inspect file contents");
+	});
+});
+
+describe("IntentSchema — default values", () => {
+	it("defaults expected_scope to empty array", () => {
+		const result = IntentSchema.parse({ goal: "Test" });
+		expect(result.expected_scope).toEqual([]);
+	});
+
+	it("defaults forbidden_scope to empty array", () => {
+		const result = IntentSchema.parse({ goal: "Test" });
+		expect(result.forbidden_scope).toEqual([]);
+	});
+
+	it("defaults max_risk to high", () => {
+		const result = IntentSchema.parse({ goal: "Test" });
+		expect(result.max_risk).toBe("high");
+	});
+
+	it("accepts all valid expected_type values", () => {
+		const types = ["feature", "bugfix", "refactor", "docs", "test", "chore", "config", "mixed"];
+		for (const t of types) {
+			const result = IntentSchema.safeParse({ goal: "Test", expected_type: t });
+			expect(result.success).toBe(true);
+		}
+	});
+
+	it("rejects zero size_budget (must be positive integer)", () => {
+		const result = IntentSchema.safeParse({ goal: "Test", size_budget: 0 });
+		expect(result.success).toBe(false);
 	});
 });

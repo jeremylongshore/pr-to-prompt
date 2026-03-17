@@ -64,8 +64,11 @@ describe("webhook payload", () => {
 		expect(payload.spec.stats.files_changed).toBe(1);
 	});
 
-	it("webhook payload includes risk flags", () => {
-		const spec = generateSpecFromPR(makePR(), "owner/repo");
+	it("webhook payload includes risk flags array with correct structure", () => {
+		const pr = makePR();
+		// Override with a file that triggers risk
+		pr.files = [{ filename: "src/auth/login.ts", status: "modified", additions: 20, deletions: 5 }];
+		const spec = generateSpecFromPR(pr, "owner/repo");
 		const payload = {
 			event: "spec_generated",
 			repo: "owner/repo",
@@ -74,14 +77,23 @@ describe("webhook payload", () => {
 			generated_at: spec.generated_at,
 		};
 		expect(Array.isArray(payload.spec.risk_flags)).toBe(true);
+		// Auth file should produce at least one high-severity risk flag
+		expect(payload.spec.risk_flags.some((r) => r.severity === "high")).toBe(true);
+		// Each flag has required fields
+		for (const flag of payload.spec.risk_flags) {
+			expect(typeof flag.category).toBe("string");
+			expect(typeof flag.description).toBe("string");
+			expect(["low", "medium", "high"]).toContain(flag.severity);
+		}
 	});
 
-	it("webhook POST uses correct headers", () => {
-		const headers = {
-			"Content-Type": "application/json",
-			"User-Agent": "pr-to-spec/0.6.0",
-		};
-		expect(headers["Content-Type"]).toBe("application/json");
-		expect(headers["User-Agent"]).toContain("pr-to-spec");
+	it("webhook payload event field is the literal string spec_generated", () => {
+		const spec = generateSpecFromPR(makePR(), "owner/repo");
+		const payload = JSON.stringify({ event: "spec_generated", spec });
+		const parsed = JSON.parse(payload);
+		// This tests that the event enum value is correct and survives serialization
+		expect(parsed.event).toBe("spec_generated");
+		expect(parsed.event).not.toBe("spec_created");
+		expect(parsed.event).not.toBe("pr_analyzed");
 	});
 });

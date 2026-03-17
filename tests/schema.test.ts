@@ -111,4 +111,126 @@ describe("PromptSpecSchema", () => {
 		});
 		expect(result.success).toBe(false);
 	});
+
+	it("accepts valid ai_enhanced field", () => {
+		const result = PromptSpecSchema.safeParse({
+			...VALID_SPEC,
+			ai_enhanced: {
+				summary: "Enhanced summary",
+				goal: "Enhanced goal",
+				key_changes: ["change one", "change two"],
+				review_hints: ["hint one"],
+				provider: "anthropic/claude-sonnet-4-5",
+			},
+		});
+		expect(result.success).toBe(true);
+	});
+
+	it("rejects ai_enhanced missing required fields", () => {
+		const result = PromptSpecSchema.safeParse({
+			...VALID_SPEC,
+			ai_enhanced: {
+				summary: "Only summary",
+				// missing: goal, key_changes, review_hints, provider
+			},
+		});
+		expect(result.success).toBe(false);
+	});
+
+	it("accepts valid semantic_changes field", () => {
+		const result = PromptSpecSchema.safeParse({
+			...VALID_SPEC,
+			semantic_changes: [
+				{
+					type: "function",
+					name: "handleRequest",
+					action: "added",
+					file: "src/handler.ts",
+				},
+			],
+		});
+		expect(result.success).toBe(true);
+	});
+
+	it("rejects semantic_changes with invalid type", () => {
+		const result = PromptSpecSchema.safeParse({
+			...VALID_SPEC,
+			semantic_changes: [
+				{
+					type: "variable", // not a valid type
+					name: "myVar",
+					action: "added",
+					file: "src/a.ts",
+				},
+			],
+		});
+		expect(result.success).toBe(false);
+	});
+
+	it("accepts valid declared_intent field", () => {
+		const result = PromptSpecSchema.safeParse({
+			...VALID_SPEC,
+			declared_intent: {
+				goal: "Add rate limiting",
+				expected_scope: ["src/middleware/**"],
+				forbidden_scope: [],
+				max_risk: "medium",
+			},
+		});
+		expect(result.success).toBe(true);
+	});
+
+	it("rejects declared_intent with invalid max_risk value", () => {
+		const result = PromptSpecSchema.safeParse({
+			...VALID_SPEC,
+			declared_intent: {
+				goal: "Test",
+				expected_scope: [],
+				forbidden_scope: [],
+				max_risk: "extreme", // invalid
+			},
+		});
+		expect(result.success).toBe(false);
+	});
+
+	it("accepts valid drift_signals field", () => {
+		const result = PromptSpecSchema.safeParse({
+			...VALID_SPEC,
+			drift_signals: [
+				{
+					type: "scope_creep",
+					description: "File outside scope",
+					severity: "medium",
+					details: ["src/db/schema.ts"],
+				},
+			],
+		});
+		expect(result.success).toBe(true);
+	});
+
+	it("rejects drift_signals with invalid signal type", () => {
+		const result = PromptSpecSchema.safeParse({
+			...VALID_SPEC,
+			drift_signals: [
+				{
+					type: "unknown_signal", // invalid
+					description: "test",
+					severity: "low",
+				},
+			],
+		});
+		expect(result.success).toBe(false);
+	});
+
+	it("accepts valid monorepo field", () => {
+		const result = PromptSpecSchema.safeParse({
+			...VALID_SPEC,
+			monorepo: {
+				detected: true,
+				affected_packages: ["packages/core", "packages/cli"],
+				workspace_root: ".",
+			},
+		});
+		expect(result.success).toBe(true);
+	});
 });

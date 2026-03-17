@@ -127,3 +127,110 @@ describe("generateSpec with DiffSource (scan mode)", () => {
 		expect(hasHighRisk).toBe(false);
 	});
 });
+
+describe("generateSpec — local_staged source_type", () => {
+	it("produces valid spec from staged source_type", () => {
+		const source = makeDiffSource({ source_type: "local_staged", commits: undefined });
+		const spec = generateSpec(source);
+		expect(spec.version).toBe(1);
+		expect(spec.source.base_branch).toBe("main");
+	});
+
+	it("commits field is 0 when source has no commits", () => {
+		const source = makeDiffSource({ commits: undefined, source_type: "local_staged" });
+		const spec = generateSpec(source);
+		expect(spec.stats.commits).toBe(0);
+	});
+
+	it("source.pr_number is undefined for staged source", () => {
+		const source = makeDiffSource({ source_type: "local_staged" });
+		const spec = generateSpec(source);
+		expect(spec.source.pr_number).toBeUndefined();
+	});
+
+	it("source.pr_url is undefined for staged source", () => {
+		const source = makeDiffSource({ source_type: "local_staged" });
+		const spec = generateSpec(source);
+		expect(spec.source.pr_url).toBeUndefined();
+	});
+});
+
+describe("generateSpec — local_commits source_type", () => {
+	it("produces valid spec from local_commits source_type", () => {
+		const source = makeDiffSource({ source_type: "local_commits", commits: 3 });
+		const spec = generateSpec(source);
+		expect(spec.stats.commits).toBe(3);
+	});
+
+	it("repo defaults to 'local' for local_commits source", () => {
+		const source = makeDiffSource({ source_type: "local_commits" });
+		const spec = generateSpec(source);
+		expect(spec.source.repo).toBe("local");
+	});
+});
+
+describe("generateSpec — exit code logic (high-risk threshold)", () => {
+	it("generates high-risk flag for payment file changes (exit code 2 path)", () => {
+		const source = makeDiffSource({
+			files: [
+				{
+					filename: "src/billing/stripe-checkout.ts",
+					status: "modified",
+					additions: 20,
+					deletions: 5,
+				},
+			],
+		});
+		const spec = generateSpec(source);
+		const hasHighRisk = spec.risk_flags.some((r) => r.severity === "high");
+		expect(hasHighRisk).toBe(true);
+	});
+
+	it("generates high-risk flag for permission file changes", () => {
+		const source = makeDiffSource({
+			files: [
+				{
+					filename: "src/rbac/permissions.ts",
+					status: "modified",
+					additions: 15,
+					deletions: 3,
+				},
+			],
+		});
+		const spec = generateSpec(source);
+		const hasHighRisk = spec.risk_flags.some((r) => r.severity === "high");
+		expect(hasHighRisk).toBe(true);
+	});
+
+	it("generates high-risk flag for database migration files", () => {
+		const source = makeDiffSource({
+			files: [
+				{
+					filename: "db/migrations/002_add_roles.sql",
+					status: "added",
+					additions: 30,
+					deletions: 0,
+				},
+			],
+		});
+		const spec = generateSpec(source);
+		const hasHighRisk = spec.risk_flags.some((r) => r.severity === "high");
+		expect(hasHighRisk).toBe(true);
+	});
+
+	it("no high-risk for test-only file changes (exit code 0 path)", () => {
+		const source = makeDiffSource({
+			files: [
+				{
+					filename: "tests/middleware.test.ts",
+					status: "added",
+					additions: 40,
+					deletions: 0,
+				},
+			],
+		});
+		const spec = generateSpec(source);
+		const hasHighRisk = spec.risk_flags.some((r) => r.severity === "high");
+		expect(hasHighRisk).toBe(false);
+	});
+});

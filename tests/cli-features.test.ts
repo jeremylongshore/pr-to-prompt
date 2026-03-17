@@ -80,35 +80,61 @@ describe("renderJson", () => {
 	});
 });
 
-describe("extractField (via spec structure)", () => {
-	it("can access top-level fields", () => {
+describe("renderJson field extraction — JSON output contains expected structure", () => {
+	it("JSON output title matches PR title exactly", () => {
 		const spec = generateSpecFromPR(makePR(), "owner/repo");
-		expect(spec.title).toBe("feat: add rate limiting");
-		expect(spec.version).toBe(1);
+		const json = renderJson(spec);
+		const parsed = JSON.parse(json);
+		expect(parsed.title).toBe("feat: add rate limiting");
+		// Ensure it's not the summary field being returned instead
+		expect(parsed.title).not.toContain("Feature by");
 	});
 
-	it("can access nested fields", () => {
+	it("JSON output version is literal 1, not a truthy number", () => {
 		const spec = generateSpecFromPR(makePR(), "owner/repo");
-		expect(spec.source.author).toBe("contributor");
-		expect(spec.intent.change_type).toBe("feature");
+		const json = renderJson(spec);
+		const parsed = JSON.parse(json);
+		expect(parsed.version).toBe(1);
+		expect(parsed.version).not.toBe(2);
+		expect(parsed.version).not.toBe(0);
 	});
 
-	it("risk_flags is an array", () => {
+	it("nested source.author is preserved through JSON serialization", () => {
 		const spec = generateSpecFromPR(makePR(), "owner/repo");
-		expect(Array.isArray(spec.risk_flags)).toBe(true);
+		const json = renderJson(spec);
+		const parsed = JSON.parse(json);
+		expect(parsed.source.author).toBe("contributor");
+		// Confirm it's not the PR title or branch name
+		expect(parsed.source.author).not.toBe("feat: add rate limiting");
 	});
 
-	it("stats contains expected values", () => {
+	it("stats.files_changed is the count of files, not additions", () => {
 		const spec = generateSpecFromPR(makePR(), "owner/repo");
-		expect(spec.stats.files_changed).toBe(3);
-		expect(spec.stats.additions).toBe(150);
+		const json = renderJson(spec);
+		const parsed = JSON.parse(json);
+		expect(parsed.stats.files_changed).toBe(3);
+		// Ensure it's not additions (150) or deletions (20)
+		expect(parsed.stats.files_changed).not.toBe(150);
+		expect(parsed.stats.files_changed).not.toBe(20);
+	});
+
+	it("intent.change_type is 'feature' for feat: prefix PR", () => {
+		const spec = generateSpecFromPR(makePR(), "owner/repo");
+		const json = renderJson(spec);
+		const parsed = JSON.parse(json);
+		expect(parsed.intent.change_type).toBe("feature");
+		// Not 'bugfix' or 'mixed'
+		expect(parsed.intent.change_type).not.toBe("bugfix");
+		expect(parsed.intent.change_type).not.toBe("mixed");
 	});
 });
 
-describe("exit code behavior", () => {
-	it("no high-risk flags for safe PR", () => {
+describe("scan exit code behavior — risk threshold logic", () => {
+	it("risk_flags is empty for a documentation-only PR (exit code would be 0)", () => {
 		const spec = generateSpecFromPR(
 			makePR({
+				title: "docs: update README",
+				head_branch: "docs/update-readme",
 				files: [
 					{
 						filename: "README.md",
@@ -120,11 +146,10 @@ describe("exit code behavior", () => {
 			}),
 			"owner/repo",
 		);
-		const hasHighRisk = spec.risk_flags.some((r) => r.severity === "high");
-		expect(hasHighRisk).toBe(false);
+		expect(spec.risk_flags).toHaveLength(0);
 	});
 
-	it("high-risk flags for auth changes", () => {
+	it("auth file changes produce exactly 'authentication' category with high severity", () => {
 		const spec = generateSpecFromPR(
 			makePR({
 				files: [
@@ -138,7 +163,31 @@ describe("exit code behavior", () => {
 			}),
 			"owner/repo",
 		);
+		const authFlag = spec.risk_flags.find((r) => r.category === "authentication");
+		expect(authFlag).toBeDefined();
+		expect(authFlag?.severity).toBe("high");
+		// Confirm it's the "high" exit code path, not medium
+		expect(authFlag?.severity).not.toBe("medium");
+		expect(authFlag?.severity).not.toBe("low");
+	});
+
+	it("dependency file change produces medium-severity risk (not high), exit code stays 0", () => {
+		const spec = generateSpecFromPR(
+			makePR({
+				files: [
+					{
+						filename: "package.json",
+						status: "modified",
+						additions: 3,
+						deletions: 1,
+					},
+				],
+			}),
+			"owner/repo",
+		);
 		const hasHighRisk = spec.risk_flags.some((r) => r.severity === "high");
-		expect(hasHighRisk).toBe(true);
+		const hasMediumRisk = spec.risk_flags.some((r) => r.severity === "medium");
+		expect(hasHighRisk).toBe(false);
+		expect(hasMediumRisk).toBe(true);
 	});
 });

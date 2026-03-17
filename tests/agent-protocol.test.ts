@@ -137,3 +137,89 @@ describe("buildEnvelope", () => {
 		}
 	});
 });
+
+describe("buildEnvelope — exit code / status mapping precision", () => {
+	it("medium-risk-only flags do not trigger high_risk (status stays clean)", () => {
+		const spec = makeSpec({
+			risk_flags: [{ category: "deps", description: "Dep change", severity: "medium" }],
+		});
+		const envelope = buildEnvelope("scan", spec);
+		expect(envelope.status).toBe("clean");
+		expect(envelope.exit_code).toBe(0);
+	});
+
+	it("low-risk-only flags do not trigger high_risk", () => {
+		const spec = makeSpec({
+			risk_flags: [{ category: "large-change", description: "Big file", severity: "low" }],
+		});
+		const envelope = buildEnvelope("scan", spec);
+		expect(envelope.status).toBe("clean");
+		expect(envelope.exit_code).toBe(0);
+	});
+
+	it("exit_code is exactly 2 for high_risk status", () => {
+		const spec = makeSpec({
+			risk_flags: [{ category: "auth", description: "Auth change", severity: "high" }],
+		});
+		const envelope = buildEnvelope("scan", spec);
+		expect(envelope.exit_code).toBe(2);
+		expect(envelope.status).toBe("high_risk");
+	});
+
+	it("exit_code is exactly 3 for drift_detected status", () => {
+		const signals: DriftSignal[] = [
+			{
+				type: "forbidden_touch",
+				description: "Forbidden file touched",
+				severity: "high",
+				details: ["src/db/schema.ts"],
+			},
+		];
+		const envelope = buildEnvelope("check", makeSpec(), { signals });
+		expect(envelope.exit_code).toBe(3);
+		expect(envelope.status).toBe("drift_detected");
+	});
+
+	it("exit_code is 0 for clean status with no risk and no drift", () => {
+		const envelope = buildEnvelope("scan", makeSpec());
+		expect(envelope.exit_code).toBe(0);
+		expect(envelope.status).toBe("clean");
+	});
+});
+
+describe("buildEnvelope — envelope structure completeness", () => {
+	it("command field exactly matches what was passed in", () => {
+		expect(buildEnvelope("analyze", makeSpec()).command).toBe("analyze");
+		expect(buildEnvelope("scan", makeSpec()).command).toBe("scan");
+		expect(buildEnvelope("check", makeSpec()).command).toBe("check");
+	});
+
+	it("spec.stats values are preserved in envelope spec", () => {
+		const spec = makeSpec();
+		const envelope = buildEnvelope("scan", spec);
+		expect(envelope.spec?.stats.files_changed).toBe(1);
+		expect(envelope.spec?.stats.additions).toBe(10);
+		expect(envelope.spec?.stats.deletions).toBe(5);
+		expect(envelope.spec?.stats.commits).toBe(1);
+	});
+
+	it("signals array is passed through unchanged when provided", () => {
+		const signals: DriftSignal[] = [
+			{ type: "type_mismatch", description: "Type mismatch", severity: "low" },
+			{ type: "size_overrun", description: "Too big", severity: "low" },
+		];
+		const envelope = buildEnvelope("check", makeSpec(), { signals });
+		expect(envelope.signals).toHaveLength(2);
+		expect(envelope.signals?.[0].type).toBe("type_mismatch");
+		expect(envelope.signals?.[1].type).toBe("size_overrun");
+	});
+
+	it("envelope with only low-severity drift signals still has drift_detected status", () => {
+		const signals: DriftSignal[] = [
+			{ type: "size_overrun", description: "Slightly over budget", severity: "low" },
+		];
+		const envelope = buildEnvelope("check", makeSpec(), { signals });
+		expect(envelope.status).toBe("drift_detected");
+		expect(envelope.exit_code).toBe(3);
+	});
+});

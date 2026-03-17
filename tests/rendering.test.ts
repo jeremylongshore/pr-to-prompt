@@ -5,6 +5,7 @@ import { renderComment } from "../src/core/rendering/comment.js";
 import { renderJson } from "../src/core/rendering/json.js";
 import { renderMarkdown } from "../src/core/rendering/markdown.js";
 import { renderYaml } from "../src/core/rendering/yaml.js";
+import { PromptSpecSchema } from "../src/core/schema/prompt-spec.js";
 
 function makePR(): PRData {
 	return {
@@ -156,13 +157,74 @@ describe("renderJson", () => {
 		expect(json).not.toContain("export function handleWebhook");
 	});
 
-	it("round-trips through schema validation", () => {
+	it("round-trips through PromptSpecSchema validation", () => {
 		const spec = generateSpecFromPR(makePR(), "owner/repo");
 		const json = renderJson(spec);
 		const parsed = JSON.parse(json);
-		// Schema should accept the parsed JSON (minus optional patch fields)
-		expect(parsed.version).toBe(1);
-		expect(parsed.stats.files_changed).toBe(2);
-		expect(Array.isArray(parsed.risk_flags)).toBe(true);
+		// Use PromptSpecSchema to validate the round-tripped object
+		const result = PromptSpecSchema.safeParse(parsed);
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.version).toBe(1);
+			expect(result.data.stats.files_changed).toBe(2);
+		}
+	});
+});
+
+describe("renderMarkdown — risk flags section", () => {
+	it("renders Risk Flags section when spec has risk flags", () => {
+		const pr = makePR();
+		// Add a file that triggers auth risk
+		pr.files = [{ filename: "src/auth/login.ts", status: "added", additions: 60, deletions: 0 }];
+		const spec = generateSpecFromPR(pr, "owner/repo");
+		const md = renderMarkdown(spec);
+		expect(md).toContain("## Risk Flags");
+		expect(md).toContain("[HIGH]");
+		expect(md).toContain("authentication");
+	});
+
+	it("does not render Risk Flags section when no risk flags", () => {
+		const spec = generateSpecFromPR(
+			{
+				...makePR(),
+				files: [{ filename: "README.md", status: "modified", additions: 5, deletions: 2 }],
+			},
+			"owner/repo",
+		);
+		const md = renderMarkdown(spec);
+		expect(md).not.toContain("## Risk Flags");
+	});
+
+	it("renders status badge [D] for removed files", () => {
+		const spec = generateSpecFromPR(
+			{
+				...makePR(),
+				files: [{ filename: "src/old-module.ts", status: "removed", additions: 0, deletions: 50 }],
+			},
+			"owner/repo",
+		);
+		const md = renderMarkdown(spec);
+		expect(md).toContain("[D]");
+		expect(md).not.toContain("[A]");
+	});
+
+	it("renders renamed file with [R] badge", () => {
+		const spec = generateSpecFromPR(
+			{
+				...makePR(),
+				files: [
+					{
+						filename: "src/new-name.ts",
+						status: "renamed",
+						additions: 0,
+						deletions: 0,
+						previous_filename: "src/old-name.ts",
+					},
+				],
+			},
+			"owner/repo",
+		);
+		const md = renderMarkdown(spec);
+		expect(md).toContain("[R]");
 	});
 });
