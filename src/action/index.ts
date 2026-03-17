@@ -31,7 +31,7 @@ function getInputs(): ActionInputs {
 	return {
 		token: process.env.GITHUB_TOKEN ?? process.env.INPUT_GITHUB_TOKEN ?? "",
 		comment: (process.env.INPUT_COMMENT ?? "true") === "true",
-		outputDir: process.env.INPUT_OUTPUT_DIR ?? ".pr-to-prompt/specs",
+		outputDir: process.env.INPUT_OUTPUT_DIR ?? ".pr-to-spec/specs",
 		format: process.env.INPUT_FORMAT ?? "both",
 		aiEnhance: (process.env.INPUT_AI_ENHANCE ?? "false") === "true",
 		aiProvider,
@@ -80,7 +80,7 @@ async function sendWebhook(
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
-			"User-Agent": "pr-to-prompt/0.5.0",
+			"User-Agent": "pr-to-spec/0.6.0",
 		},
 		body: payload,
 	});
