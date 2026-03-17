@@ -1,10 +1,10 @@
-# pr-to-prompt
+# pr-to-spec
 
 The agent-to-agent translation layer for pull requests.
 
-`pr-to-prompt` converts any GitHub PR into a structured **prompt-spec** — a canonical format that your AI agent can consume, evaluate, and act on. No MCP server needed. The CLI *is* the API.
+`pr-to-spec` converts any GitHub PR into a structured **prompt-spec** — a canonical format that your AI agent can consume, evaluate, and act on. No MCP server needed. The CLI *is* the API.
 
-[![CI](https://github.com/jeremylongshore/pr-to-prompt/actions/workflows/ci.yml/badge.svg)](https://github.com/jeremylongshore/pr-to-prompt/actions/workflows/ci.yml)
+[![CI](https://github.com/jeremylongshore/pr-to-spec/actions/workflows/ci.yml/badge.svg)](https://github.com/jeremylongshore/pr-to-spec/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 ---
@@ -12,17 +12,17 @@ The agent-to-agent translation layer for pull requests.
 ## How It Works
 
 ```
-PR opened → pr-to-prompt → structured spec → your agent decides
+PR opened → pr-to-spec → structured spec → your agent decides
 ```
 
 1. A contributor opens a PR
-2. `pr-to-prompt` fetches metadata, diffs, and reviews via GitHub API
+2. `pr-to-spec` fetches metadata, diffs, and reviews via GitHub API
 3. **Deterministically** generates a structured spec (no LLM required)
 4. Your agent consumes the spec and makes a review decision
 
 ```bash
 # The complete agent pipeline — one line
-pr-to-prompt --repo owner/repo --pr 42 --json | your-agent review
+pr-to-spec --repo owner/repo --pr 42 --json | your-agent review
 ```
 
 ## Quick Start
@@ -31,20 +31,20 @@ pr-to-prompt --repo owner/repo --pr 42 --json | your-agent review
 
 ```bash
 # Get the full spec as JSON — pipe to jq, your agent, or any tool
-pr-to-prompt --repo owner/repo --pr 42 --json | jq .
+pr-to-spec --repo owner/repo --pr 42 --json | jq .
 
 # Extract just the risk flags
-pr-to-prompt --repo owner/repo --pr 42 --json | jq '.risk_flags'
+pr-to-spec --repo owner/repo --pr 42 --json | jq '.risk_flags'
 
 # Extract a single field
-pr-to-prompt --repo owner/repo --pr 42 --field risk_flags --quiet
+pr-to-spec --repo owner/repo --pr 42 --field risk_flags --quiet
 
 # Check exit code: 0=clean, 1=error, 2=high-risk PR
-pr-to-prompt --repo owner/repo --pr 42 --json > /dev/null
+pr-to-spec --repo owner/repo --pr 42 --json > /dev/null
 echo $?  # 2 if high-risk changes detected
 
 # Feed to Claude for review
-pr-to-prompt --repo owner/repo --pr 42 --json \
+pr-to-spec --repo owner/repo --pr 42 --json \
   | claude --print "Review this PR spec and decide: approve, request changes, or needs info"
 ```
 
@@ -52,7 +52,7 @@ pr-to-prompt --repo owner/repo --pr 42 --json \
 
 ```bash
 # Generate all formats to a directory
-pr-to-prompt --repo owner/repo --pr 42 --out ./specs
+pr-to-spec --repo owner/repo --pr 42 --out ./specs
 
 # Output:
 #   specs/pr-42.spec.yaml     — canonical YAML spec
@@ -63,8 +63,8 @@ pr-to-prompt --repo owner/repo --pr 42 --out ./specs
 ### GitHub Action
 
 ```yaml
-# .github/workflows/pr-to-prompt.yml
-name: PR to Prompt
+# .github/workflows/pr-to-spec.yml
+name: PR to Spec
 on:
   pull_request:
     types: [opened, synchronize]
@@ -81,7 +81,7 @@ jobs:
 
       - name: Generate prompt-spec
         id: spec
-        uses: jeremylongshore/pr-to-prompt@main
+        uses: jeremylongshore/pr-to-spec@main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           INPUT_COMMENT: "true"
@@ -90,15 +90,15 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: prompt-spec-pr-${{ github.event.pull_request.number }}
-          path: .pr-to-prompt/specs/
+          path: .pr-to-spec/specs/
 ```
 
 ### npm / npx
 
 ```bash
-npm install -g pr-to-prompt
+npm install -g pr-to-spec
 # or
-npx pr-to-prompt --repo owner/repo --pr 42 --json
+npx pr-to-spec --repo owner/repo --pr 42 --json
 ```
 
 ## CLI Reference
@@ -185,7 +185,7 @@ Every spec contains:
 ```bash
 #!/bin/bash
 # Block merges on high-risk PRs
-pr-to-prompt --repo "$REPO" --pr "$PR_NUM" --json > /tmp/spec.json
+pr-to-spec --repo "$REPO" --pr "$PR_NUM" --json > /tmp/spec.json
 EXIT_CODE=$?
 
 if [ $EXIT_CODE -eq 2 ]; then
@@ -202,10 +202,10 @@ Add this to your project's `CLAUDE.md`:
 ```markdown
 ## PR Review Protocol
 
-When asked to review a PR, use pr-to-prompt to generate the spec first:
+When asked to review a PR, use pr-to-spec to generate the spec first:
 
 \`\`\`bash
-pr-to-prompt --repo owner/repo --pr <number> --json
+pr-to-spec --repo owner/repo --pr <number> --json
 \`\`\`
 
 Evaluate the spec against these criteria:
@@ -220,14 +220,14 @@ Evaluate the spec against these criteria:
 ```yaml
 - name: Generate spec
   id: spec
-  uses: jeremylongshore/pr-to-prompt@main
+  uses: jeremylongshore/pr-to-spec@main
   env:
     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     INPUT_FORMAT: "json"
 
 - name: Feed to review agent
   run: |
-    cat .pr-to-prompt/specs/pr-${{ github.event.pull_request.number }}.spec.json \
+    cat .pr-to-spec/specs/pr-${{ github.event.pull_request.number }}.spec.json \
       | your-review-tool --decide
 ```
 

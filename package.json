@@ -1,11 +1,11 @@
 {
-  "name": "pr-to-prompt",
-  "version": "0.5.0",
-  "description": "Convert GitHub PRs into structured, reviewable prompt-spec artifacts",
+  "name": "pr-to-spec",
+  "version": "0.6.0",
+  "description": "Convert code changes into structured, agent-consumable spec artifacts",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "pr-to-prompt": "dist/cli/index.js"
+    "pr-to-spec": "dist/cli/index.js"
   },
   "files": [
     "dist/",
@@ -41,7 +41,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/jeremylongshore/pr-to-prompt.git"
+    "url": "https://github.com/jeremylongshore/pr-to-spec.git"
   },
   "engines": {
     "node": ">=20.0.0"

@@ -1,5 +1,5 @@
-name: "PR to Prompt"
-description: "Convert GitHub PRs into structured prompt-spec artifacts for AI-assisted review"
+name: "PR to Spec"
+description: "Convert GitHub PRs into structured, agent-consumable spec artifacts"
 author: "Jeremy Longshore"
 
 branding:
@@ -18,7 +18,7 @@ inputs:
   output_dir:
     description: "Directory to write spec artifacts"
     required: false
-    default: ".pr-to-prompt/specs"
+    default: ".pr-to-spec/specs"
   ai_enhance:
     description: "Enhance spec with AI-generated insights (requires ai_api_key)"
     required: false
