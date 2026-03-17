@@ -12,6 +12,7 @@ import { renderJson } from "../core/rendering/json.js";
 import { renderMarkdown } from "../core/rendering/markdown.js";
 import { renderYaml } from "../core/rendering/yaml.js";
 import { checkCommand } from "./check.js";
+import { feedbackCommand } from "./feedback.js";
 import { intentCommand } from "./intent.js";
 import { scanCommand } from "./scan.js";
 
@@ -217,4 +218,5 @@ function resolveAIKey(provider: string): string | undefined {
 program.addCommand(scanCommand);
 program.addCommand(intentCommand);
 program.addCommand(checkCommand);
+program.addCommand(feedbackCommand);
 program.parse();

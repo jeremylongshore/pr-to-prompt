@@ -60,3 +60,11 @@ export {
 	createEmptyGraph,
 } from "./core/graph/propagation.js";
 export { readGraph, writeGraph, getGraphPath } from "./core/graph/storage.js";
+export {
+	ingestFeedback,
+	summarizeFeedback,
+	type ReviewFeedback,
+	type CIFeedback,
+	type FeedbackInput,
+	type FeedbackSummary,
+} from "./core/feedback/ingester.js";
