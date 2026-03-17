@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-03-17
+
+### Changed
+- **Renamed**: `pr-to-prompt` → `pr-to-spec`
+- **Positioning**: "The flight envelope for agentic coding"
+
+### Added
+- `DiffSource` abstraction — works on any diff (local branches, staged changes, GitHub PRs)
+- `scan` subcommand — analyze local git changes without GitHub
+- `intent` subcommand — declare expected scope, risk ceiling, change type
+- `check` subcommand — scan + drift detection against declared intent
+- Drift signals: `scope_creep`, `forbidden_touch`, `risk_escalation`, `size_overrun`, `type_mismatch`
+- Agent protocol envelope wraps all `--json` output
+- Claude Code skill manifest (`.claude/skills/pr-to-spec/SKILL.md`)
+
+### Backwards Compatible
+- `pr-to-spec --repo owner/repo --pr 42 --json` still works unchanged
+
 ## [0.5.0] - 2026-03-09
 
 ### Added

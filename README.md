@@ -1,66 +1,186 @@
 # pr-to-spec
 
-The agent-to-agent translation layer for pull requests.
+**The flight envelope for agentic coding.**
 
-`pr-to-spec` converts any GitHub PR into a structured **prompt-spec** — a canonical format that your AI agent can consume, evaluate, and act on. No MCP server needed. The CLI *is* the API.
+CodeRabbit reviews for humans. `pr-to-spec` converts for agents.
+
+Turn any code change — a GitHub PR, a local branch, staged edits — into a structured, agent-consumable spec with intent drift detection. No MCP server needed. The CLI *is* the API.
 
 [![CI](https://github.com/jeremylongshore/pr-to-spec/actions/workflows/ci.yml/badge.svg)](https://github.com/jeremylongshore/pr-to-spec/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 ---
 
-## How It Works
+## What It Does
 
 ```
-PR opened → pr-to-spec → structured spec → your agent decides
+declare intent → make changes → pr-to-spec check → agent sees clean/drift/high-risk
 ```
 
-1. A contributor opens a PR
-2. `pr-to-spec` fetches metadata, diffs, and reviews via GitHub API
-3. **Deterministically** generates a structured spec (no LLM required)
-4. Your agent consumes the spec and makes a review decision
+1. **Declare intent**: Tell `pr-to-spec` what you're building, what scope is allowed, and your risk ceiling
+2. **Make changes**: Work normally in your branch
+3. **Check drift**: `pr-to-spec check --json` produces a structured spec + drift signals
+4. **Agent consumes**: Any agent reads the envelope and acts accordingly
 
-```bash
-# The complete agent pipeline — one line
-pr-to-spec --repo owner/repo --pr 42 --json | your-agent review
-```
+---
 
 ## Quick Start
 
-### Agent Piping (recommended)
+### Local Diff (no GitHub needed)
 
 ```bash
-# Get the full spec as JSON — pipe to jq, your agent, or any tool
-pr-to-spec --repo owner/repo --pr 42 --json | jq .
+# Analyze your current branch vs main
+pr-to-spec scan --branch main --json
+
+# Analyze staged changes only
+pr-to-spec scan --staged --json
+
+# Analyze last 3 commits
+pr-to-spec scan --diff 3 --json
+```
+
+### Intent + Drift Detection
+
+```bash
+# 1. Declare what this change is supposed to do
+pr-to-spec intent set \
+  --goal "Add rate limiting to API" \
+  --scope "src/middleware/**" \
+  --forbid "src/db/**" \
+  --max-risk medium \
+  --type feature
+
+# 2. After making changes, check for drift
+pr-to-spec check --json
+# exit 0 = clean, exit 2 = high-risk, exit 3 = drift detected
+
+# Show current intent
+pr-to-spec intent show
+```
+
+### GitHub PR Analysis
+
+```bash
+# Analyze a GitHub PR
+pr-to-spec --repo owner/repo --pr 42 --json | your-agent review
 
 # Extract just the risk flags
-pr-to-spec --repo owner/repo --pr 42 --json | jq '.risk_flags'
-
-# Extract a single field
-pr-to-spec --repo owner/repo --pr 42 --field risk_flags --quiet
-
-# Check exit code: 0=clean, 1=error, 2=high-risk PR
-pr-to-spec --repo owner/repo --pr 42 --json > /dev/null
-echo $?  # 2 if high-risk changes detected
+pr-to-spec --repo owner/repo --pr 42 --json | jq '.spec.risk_flags'
 
 # Feed to Claude for review
 pr-to-spec --repo owner/repo --pr 42 --json \
-  | claude --print "Review this PR spec and decide: approve, request changes, or needs info"
+  | claude --print "Review this spec and decide: approve, request changes, or needs info"
 ```
 
-### File Output
+---
 
-```bash
-# Generate all formats to a directory
-pr-to-spec --repo owner/repo --pr 42 --out ./specs
+## Agent Protocol
 
-# Output:
-#   specs/pr-42.spec.yaml     — canonical YAML spec
-#   specs/pr-42.summary.md    — human-readable Markdown
-#   specs/pr-42.spec.json     — machine-readable JSON
+All `--json` output is wrapped in the agent protocol envelope:
+
+```json
+{
+  "version": 1,
+  "command": "check",
+  "status": "drift_detected",
+  "exit_code": 3,
+  "signals": [
+    {
+      "type": "forbidden_touch",
+      "description": "1 forbidden file(s) modified",
+      "severity": "high",
+      "details": ["src/db/schema.ts"]
+    }
+  ],
+  "spec": { ... },
+  "intent": { ... }
+}
 ```
 
-### GitHub Action
+### Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | Clean — no issues |
+| `1` | Error |
+| `2` | High-risk changes detected |
+| `3` | Drift from declared intent |
+
+### Drift Signals
+
+| Signal | Trigger |
+|--------|---------|
+| `scope_creep` | Files changed outside `expected_scope` |
+| `forbidden_touch` | Files matching `forbidden_scope` were modified |
+| `risk_escalation` | Detected risk level exceeds `max_risk` |
+| `size_overrun` | Total LOC changed exceeds `size_budget` |
+| `type_mismatch` | Inferred change type doesn't match `expected_type` |
+
+---
+
+## CLI Reference
+
+### `pr-to-spec` (analyze a GitHub PR)
+
+```
+Options:
+  --repo <owner/name>      GitHub repository (required)
+  --pr <number>            Pull request number (required)
+  --out <directory>        Output directory (default: ./output)
+  --token <token>          GitHub token (or set GITHUB_TOKEN env var)
+  --format <format>        Output: yaml, markdown, json, both (default: both)
+  --stdout                 Print to stdout instead of files
+  --quiet                  Suppress logging
+  --field <path>           Extract a single field (dot notation)
+  --json                   Shorthand for --format json --stdout --quiet
+  --comment                Post spec summary as a PR comment
+  --ai-enhance             Enhance spec with AI-generated insights
+  -V, --version            Show version
+  -h, --help               Show help
+```
+
+### `pr-to-spec scan` (analyze local changes)
+
+```
+Options:
+  --branch <ref>           Base branch to diff against (default: main)
+  --diff <n>               Diff last N commits
+  --staged                 Analyze staged changes only
+  --out <directory>        Output directory (default: ./output)
+  --format <format>        Output: yaml, markdown, json, both
+  --stdout                 Print to stdout
+  --quiet                  Suppress logging
+  --json                   Shorthand for --format json --stdout --quiet
+  --field <path>           Extract a single field
+```
+
+### `pr-to-spec intent set`
+
+```
+Options:
+  --goal <text>            What this change is trying to achieve (required)
+  --scope <glob...>        Expected file globs (repeatable)
+  --forbid <glob...>       Forbidden file globs (repeatable)
+  --max-risk <level>       Maximum acceptable risk: low, medium, high
+  --type <type>            Expected change type: feature, bugfix, refactor, etc.
+  --size-budget <n>        Max total lines changed
+  --json                   Output as JSON
+```
+
+### `pr-to-spec check`
+
+```
+Options:
+  --branch <ref>           Base branch to diff against
+  --diff <n>               Diff last N commits
+  --staged                 Analyze staged changes only
+  --quiet                  Suppress logging
+  --json                   Output as JSON agent protocol envelope
+```
+
+---
+
+## GitHub Action
 
 ```yaml
 # .github/workflows/pr-to-spec.yml
@@ -79,7 +199,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Generate prompt-spec
+      - name: Generate spec
         id: spec
         uses: jeremylongshore/pr-to-spec@main
         env:
@@ -93,143 +213,7 @@ jobs:
           path: .pr-to-spec/specs/
 ```
 
-### npm / npx
-
-```bash
-npm install -g pr-to-spec
-# or
-npx pr-to-spec --repo owner/repo --pr 42 --json
-```
-
-## CLI Reference
-
-```
-Options:
-  --repo <owner/name>      GitHub repository (required)
-  --pr <number>            Pull request number (required)
-  --out <directory>        Output directory (default: ./output)
-  --token <token>          GitHub token (or set GITHUB_TOKEN env var)
-  --format <format>        Output: yaml, markdown, json, both (default: both)
-  --stdout                 Print to stdout instead of files
-  --quiet                  Suppress logging, only output the spec (for piping)
-  --field <path>           Extract a single field (dot notation)
-  --json                   Shorthand for --format json --stdout --quiet
-  --comment                Post spec summary as a PR comment
-  --ai-enhance             Enhance spec with AI-generated insights
-  --ai-provider <provider> AI provider: anthropic, openai (default: anthropic)
-  --ai-model <model>       AI model override
-  -V, --version            Show version
-  -h, --help               Show help
-```
-
-### Exit Codes
-
-| Code | Meaning |
-|------|---------|
-| `0` | Success — PR analyzed, no high-risk flags |
-| `1` | Error — invalid input, API failure, etc. |
-| `2` | Success — but high-risk changes detected |
-
-## The Prompt-Spec Format
-
-Every spec contains:
-
-| Field | Description |
-|-------|-------------|
-| `source` | PR metadata (repo, number, author, branches) |
-| `intent` | Inferred goal and change type (feature, bugfix, refactor, etc.) |
-| `scope` | Affected directories and glob patterns |
-| `affected_files` | File list with status and line counts |
-| `risk_flags` | Categorized risks with severity (high/medium/low) |
-| `constraints` | Rules the change must preserve |
-| `acceptance_criteria` | Verification checklist |
-| `generation_prompt` | Ready-to-use prompt for reimplementation |
-| `decision_prompt` | Ready-to-use prompt for review decisions |
-| `semantic_changes` | Extracted function/class/import changes |
-| `review_summary` | Reviewer comments and approval status |
-| `stats` | Files changed, additions, deletions, commits |
-
-### Sample JSON Spec (truncated)
-
-```json
-{
-  "version": 1,
-  "source": {
-    "repo": "owner/repo",
-    "pr_number": 42,
-    "author": "contributor"
-  },
-  "intent": {
-    "likely_goal": "Add tenant-aware API rate limiting to public routes",
-    "change_type": "feature"
-  },
-  "risk_flags": [
-    {
-      "category": "security-headers",
-      "description": "Changes to middleware (src/middleware/rateLimit.ts)",
-      "severity": "medium"
-    }
-  ],
-  "stats": {
-    "files_changed": 3,
-    "additions": 150,
-    "deletions": 10
-  }
-}
-```
-
-## Agent Integration Patterns
-
-### Bash: Automated Risk Gate
-
-```bash
-#!/bin/bash
-# Block merges on high-risk PRs
-pr-to-spec --repo "$REPO" --pr "$PR_NUM" --json > /tmp/spec.json
-EXIT_CODE=$?
-
-if [ $EXIT_CODE -eq 2 ]; then
-  echo "High-risk PR detected. Routing to senior reviewer."
-  jq '.risk_flags[] | select(.severity == "high")' /tmp/spec.json
-  exit 1
-fi
-```
-
-### Claude Code: CLAUDE.md Integration
-
-Add this to your project's `CLAUDE.md`:
-
-```markdown
-## PR Review Protocol
-
-When asked to review a PR, use pr-to-spec to generate the spec first:
-
-\`\`\`bash
-pr-to-spec --repo owner/repo --pr <number> --json
-\`\`\`
-
-Evaluate the spec against these criteria:
-1. Do the risk flags indicate areas needing careful review?
-2. Does the intent align with the project roadmap?
-3. Are the constraints satisfied?
-4. Would you approve, request changes, or ask for more info?
-```
-
-### GitHub Action Chain: Spec to Another Action
-
-```yaml
-- name: Generate spec
-  id: spec
-  uses: jeremylongshore/pr-to-spec@main
-  env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    INPUT_FORMAT: "json"
-
-- name: Feed to review agent
-  run: |
-    cat .pr-to-spec/specs/pr-${{ github.event.pull_request.number }}.spec.json \
-      | your-review-tool --decide
-```
+---
 
 ## Risk Classification
 
@@ -248,29 +232,23 @@ Built-in heuristic rules flag changes to:
 | `security-config` | medium | CORS, CSP, security headers |
 | `large-change` | low | 300+ line changes in a single file |
 
-## Environment Variables
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `GITHUB_TOKEN` | Yes | GitHub token with PR read access |
-| `ANTHROPIC_API_KEY` | No | For AI-enhanced summaries |
-| `OPENAI_API_KEY` | No | Alternative AI provider |
-
-**Classic PAT:** `repo` (private repos) or `public_repo` (public only)
-**Fine-grained PAT:** `Pull requests: Read` + `Contents: Read`
-**GitHub Action:** Default `GITHUB_TOKEN` works — no additional secrets needed.
+---
 
 ## Architecture
 
 ```
 src/
-  cli/            CLI entrypoint (Commander)
+  cli/            CLI entrypoints (analyze, scan, intent, check)
   action/         GitHub Action entrypoint
   core/
     schema/       Zod schema for the canonical prompt-spec format
     github/       Octokit-based PR data fetching
-    parsing/      Deterministic spec generation from PR metadata
+    sources/      DiffSource abstraction (GitHub PR, local branch, staged, commits)
+    parsing/      Deterministic spec generation from diff metadata
     risk/         Rule-based risk classification heuristics
+    intent/       Intent schema and YAML storage (.pr-to-spec/intent.yaml)
+    drift/         Drift detection against declared intent
+    protocol/     Agent protocol envelope (version, status, exit_code)
     rendering/    YAML, Markdown, JSON, and PR comment renderers
     ai/           Optional AI enhancement (Anthropic, OpenAI)
     diff/         Spec version diffing
@@ -279,18 +257,22 @@ src/
 ### Design Principles
 
 - **Deterministic first**: Core spec uses heuristics, not LLMs. Reproducible and auditable.
-- **No execution**: Never runs code from PRs — metadata and diffs only.
-- **Agent-native**: JSON output, clean exit codes, field extraction. Built for piping.
+- **No execution**: Never runs code — metadata and diffs only.
+- **Agent-native**: JSON envelope output, clean exit codes, field extraction. Built for piping.
+- **Local-first**: Works on local branches and staged changes without GitHub.
 - **Minimal trust surface**: Read-only by default. Zod-validated output.
 
-## Security
+---
 
-See [SECURITY.md](./SECURITY.md) for the full security policy and threat model.
+## Environment Variables
 
-- Never executes PR code
-- Treats contributor input as untrusted
-- Validates and sanitizes all output
-- Minimal dependency tree (4 runtime deps)
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `GITHUB_TOKEN` | For GitHub PRs | GitHub token with PR read access |
+| `ANTHROPIC_API_KEY` | No | For AI-enhanced summaries |
+| `OPENAI_API_KEY` | No | Alternative AI provider |
+
+---
 
 ## Development
 
