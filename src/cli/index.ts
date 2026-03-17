@@ -10,6 +10,7 @@ import { renderComment } from "../core/rendering/comment.js";
 import { renderJson } from "../core/rendering/json.js";
 import { renderMarkdown } from "../core/rendering/markdown.js";
 import { renderYaml } from "../core/rendering/yaml.js";
+import { scanCommand } from "./scan.js";
 
 program
 	.name("pr-to-spec")
@@ -208,4 +209,5 @@ function resolveAIKey(provider: string): string | undefined {
 	return process.env.ANTHROPIC_API_KEY;
 }
 
+program.addCommand(scanCommand);
 program.parse();
