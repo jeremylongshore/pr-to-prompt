@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PRData } from "../src/core/github/client.js";
-import { compactSpec, generateSpec } from "../src/core/parsing/pr-parser.js";
+import { compactSpec, generateSpecFromPR } from "../src/core/parsing/pr-parser.js";
 import { PromptSpecSchema } from "../src/core/schema/prompt-spec.js";
 
 function makePR(overrides: Partial<PRData> = {}): PRData {
@@ -47,32 +47,32 @@ function makePR(overrides: Partial<PRData> = {}): PRData {
 	};
 }
 
-describe("generateSpec", () => {
+describe("generateSpecFromPR", () => {
 	it("produces a valid spec", () => {
-		const spec = generateSpec(makePR(), "owner/repo");
+		const spec = generateSpecFromPR(makePR(), "owner/repo");
 		const result = PromptSpecSchema.safeParse(spec);
 		expect(result.success).toBe(true);
 	});
 
 	it("sets version to 1", () => {
-		const spec = generateSpec(makePR(), "owner/repo");
+		const spec = generateSpecFromPR(makePR(), "owner/repo");
 		expect(spec.version).toBe(1);
 	});
 
 	it("extracts source metadata", () => {
-		const spec = generateSpec(makePR(), "owner/repo");
+		const spec = generateSpecFromPR(makePR(), "owner/repo");
 		expect(spec.source.repo).toBe("owner/repo");
 		expect(spec.source.pr_number).toBe(42);
 		expect(spec.source.author).toBe("contributor");
 	});
 
 	it("infers feature change type from title", () => {
-		const spec = generateSpec(makePR(), "owner/repo");
+		const spec = generateSpecFromPR(makePR(), "owner/repo");
 		expect(spec.intent.change_type).toBe("feature");
 	});
 
 	it("infers bugfix change type", () => {
-		const spec = generateSpec(
+		const spec = generateSpecFromPR(
 			makePR({ title: "fix: null pointer in parser", head_branch: "fix/null-pointer" }),
 			"owner/repo",
 		);
@@ -80,7 +80,7 @@ describe("generateSpec", () => {
 	});
 
 	it("infers docs change type from file extensions", () => {
-		const spec = generateSpec(
+		const spec = generateSpecFromPR(
 			makePR({
 				title: "Update docs",
 				head_branch: "docs/update",
@@ -92,17 +92,17 @@ describe("generateSpec", () => {
 	});
 
 	it("uses PR body first paragraph as goal", () => {
-		const spec = generateSpec(makePR(), "owner/repo");
+		const spec = generateSpecFromPR(makePR(), "owner/repo");
 		expect(spec.intent.likely_goal).toBe("Add tenant-aware rate limiting to public API routes.");
 	});
 
 	it("falls back to title when body is empty", () => {
-		const spec = generateSpec(makePR({ body: null }), "owner/repo");
+		const spec = generateSpecFromPR(makePR({ body: null }), "owner/repo");
 		expect(spec.intent.likely_goal).toContain("add rate limiting");
 	});
 
 	it("populates stats correctly", () => {
-		const spec = generateSpec(makePR(), "owner/repo");
+		const spec = generateSpecFromPR(makePR(), "owner/repo");
 		expect(spec.stats.files_changed).toBe(3);
 		expect(spec.stats.additions).toBe(150);
 		expect(spec.stats.deletions).toBe(20);
@@ -110,19 +110,19 @@ describe("generateSpec", () => {
 	});
 
 	it("generates a non-empty generation prompt", () => {
-		const spec = generateSpec(makePR(), "owner/repo");
+		const spec = generateSpecFromPR(makePR(), "owner/repo");
 		expect(spec.generation_prompt.length).toBeGreaterThan(50);
 		expect(spec.generation_prompt).toContain("owner/repo");
 	});
 
 	it("includes affected files", () => {
-		const spec = generateSpec(makePR(), "owner/repo");
+		const spec = generateSpecFromPR(makePR(), "owner/repo");
 		expect(spec.affected_files).toHaveLength(3);
 		expect(spec.affected_files[0].filename).toBe("src/middleware/rateLimit.ts");
 	});
 
 	it("generates a decision prompt", () => {
-		const spec = generateSpec(makePR(), "owner/repo");
+		const spec = generateSpecFromPR(makePR(), "owner/repo");
 		expect(spec.decision_prompt.length).toBeGreaterThan(50);
 		expect(spec.decision_prompt).toContain("Decision Required");
 		expect(spec.decision_prompt).toContain("APPROVE");
@@ -132,7 +132,7 @@ describe("generateSpec", () => {
 
 describe("compactSpec", () => {
 	it("removes patch data from files", () => {
-		const spec = generateSpec(makePR(), "owner/repo");
+		const spec = generateSpecFromPR(makePR(), "owner/repo");
 		const compact = compactSpec(spec);
 		for (const f of compact.affected_files) {
 			expect(f.patch).toBeUndefined();
@@ -140,7 +140,7 @@ describe("compactSpec", () => {
 	});
 
 	it("preserves all other fields", () => {
-		const spec = generateSpec(makePR(), "owner/repo");
+		const spec = generateSpecFromPR(makePR(), "owner/repo");
 		const compact = compactSpec(spec);
 		expect(compact.title).toBe(spec.title);
 		expect(compact.source).toEqual(spec.source);

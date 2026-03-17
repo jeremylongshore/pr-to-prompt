@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PRData } from "../src/core/github/client.js";
-import { generateSpec } from "../src/core/parsing/pr-parser.js";
+import { generateSpecFromPR } from "../src/core/parsing/pr-parser.js";
 import { renderJson } from "../src/core/rendering/json.js";
 
 function makePR(overrides: Partial<PRData> = {}): PRData {
@@ -48,14 +48,14 @@ function makePR(overrides: Partial<PRData> = {}): PRData {
 
 describe("renderJson", () => {
 	it("produces valid JSON string", () => {
-		const spec = generateSpec(makePR(), "owner/repo");
+		const spec = generateSpecFromPR(makePR(), "owner/repo");
 		const json = renderJson(spec);
 		const parsed = JSON.parse(json);
 		expect(parsed.version).toBe(1);
 	});
 
 	it("contains key fields", () => {
-		const spec = generateSpec(makePR(), "owner/repo");
+		const spec = generateSpecFromPR(makePR(), "owner/repo");
 		const json = renderJson(spec);
 		const parsed = JSON.parse(json);
 		expect(parsed.source.repo).toBe("owner/repo");
@@ -64,13 +64,13 @@ describe("renderJson", () => {
 	});
 
 	it("does not contain patch data", () => {
-		const spec = generateSpec(makePR(), "owner/repo");
+		const spec = generateSpecFromPR(makePR(), "owner/repo");
 		const json = renderJson(spec);
 		expect(json).not.toContain("export function rateLimit");
 	});
 
 	it("round-trips through schema validation", () => {
-		const spec = generateSpec(makePR(), "owner/repo");
+		const spec = generateSpecFromPR(makePR(), "owner/repo");
 		const json = renderJson(spec);
 		const parsed = JSON.parse(json);
 		expect(parsed.version).toBe(1);
@@ -82,24 +82,24 @@ describe("renderJson", () => {
 
 describe("extractField (via spec structure)", () => {
 	it("can access top-level fields", () => {
-		const spec = generateSpec(makePR(), "owner/repo");
+		const spec = generateSpecFromPR(makePR(), "owner/repo");
 		expect(spec.title).toBe("feat: add rate limiting");
 		expect(spec.version).toBe(1);
 	});
 
 	it("can access nested fields", () => {
-		const spec = generateSpec(makePR(), "owner/repo");
+		const spec = generateSpecFromPR(makePR(), "owner/repo");
 		expect(spec.source.author).toBe("contributor");
 		expect(spec.intent.change_type).toBe("feature");
 	});
 
 	it("risk_flags is an array", () => {
-		const spec = generateSpec(makePR(), "owner/repo");
+		const spec = generateSpecFromPR(makePR(), "owner/repo");
 		expect(Array.isArray(spec.risk_flags)).toBe(true);
 	});
 
 	it("stats contains expected values", () => {
-		const spec = generateSpec(makePR(), "owner/repo");
+		const spec = generateSpecFromPR(makePR(), "owner/repo");
 		expect(spec.stats.files_changed).toBe(3);
 		expect(spec.stats.additions).toBe(150);
 	});
@@ -107,7 +107,7 @@ describe("extractField (via spec structure)", () => {
 
 describe("exit code behavior", () => {
 	it("no high-risk flags for safe PR", () => {
-		const spec = generateSpec(
+		const spec = generateSpecFromPR(
 			makePR({
 				files: [
 					{
@@ -125,7 +125,7 @@ describe("exit code behavior", () => {
 	});
 
 	it("high-risk flags for auth changes", () => {
-		const spec = generateSpec(
+		const spec = generateSpecFromPR(
 			makePR({
 				files: [
 					{

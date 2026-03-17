@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PRData } from "../src/core/github/client.js";
-import { generateSpec } from "../src/core/parsing/pr-parser.js";
+import { generateSpecFromPR } from "../src/core/parsing/pr-parser.js";
 
 function makePR(): PRData {
 	return {
@@ -33,7 +33,7 @@ function makePR(): PRData {
 
 describe("webhook payload", () => {
 	it("generates valid JSON payload from spec", () => {
-		const spec = generateSpec(makePR(), "owner/repo");
+		const spec = generateSpecFromPR(makePR(), "owner/repo");
 		const payload = JSON.stringify({
 			event: "spec_generated",
 			repo: "owner/repo",
@@ -50,7 +50,7 @@ describe("webhook payload", () => {
 	});
 
 	it("webhook payload contains full spec", () => {
-		const spec = generateSpec(makePR(), "owner/repo");
+		const spec = generateSpecFromPR(makePR(), "owner/repo");
 		const payload = {
 			event: "spec_generated",
 			repo: "owner/repo",
@@ -61,11 +61,11 @@ describe("webhook payload", () => {
 		expect(payload.spec.title).toBe("feat: add rate limiting");
 		expect(payload.spec.source.author).toBe("contributor");
 		expect(Array.isArray(payload.spec.risk_flags)).toBe(true);
-		expect(payload.spec.stats.files_changed).toBe(3);
+		expect(payload.spec.stats.files_changed).toBe(1);
 	});
 
 	it("webhook payload includes risk flags", () => {
-		const spec = generateSpec(makePR(), "owner/repo");
+		const spec = generateSpecFromPR(makePR(), "owner/repo");
 		const payload = {
 			event: "spec_generated",
 			repo: "owner/repo",
@@ -79,9 +79,9 @@ describe("webhook payload", () => {
 	it("webhook POST uses correct headers", () => {
 		const headers = {
 			"Content-Type": "application/json",
-			"User-Agent": "pr-to-prompt/0.5.0",
+			"User-Agent": "pr-to-spec/0.6.0",
 		};
 		expect(headers["Content-Type"]).toBe("application/json");
-		expect(headers["User-Agent"]).toContain("pr-to-prompt");
+		expect(headers["User-Agent"]).toContain("pr-to-spec");
 	});
 });

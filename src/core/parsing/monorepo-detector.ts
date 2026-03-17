@@ -1,5 +1,3 @@
-import type { PRFile } from "../github/client.js";
-
 export interface MonorepoInfo {
 	detected: boolean;
 	affected_packages: string[];
@@ -19,11 +17,16 @@ const WORKSPACE_INDICATORS = [
 	"Cargo.toml", // Rust workspaces
 ];
 
+/** Minimal file shape required by monorepo detection */
+interface MonorepoFile {
+	filename: string;
+}
+
 /**
  * Detect monorepo structure from changed files.
  * Returns undefined if not a monorepo.
  */
-export function detectMonorepo(files: PRFile[]): MonorepoInfo | undefined {
+export function detectMonorepo(files: MonorepoFile[]): MonorepoInfo | undefined {
 	const packages = new Set<string>();
 	let workspaceRoot: string | undefined;
 

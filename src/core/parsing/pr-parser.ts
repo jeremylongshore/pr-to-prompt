@@ -1,51 +1,57 @@
 import type { PRData } from "../github/client.js";
 import { classifyRisks } from "../risk/classifier.js";
 import type { FileChange, PromptSpec } from "../schema/prompt-spec.js";
+import { githubPRtoDiffSource } from "../sources/github.js";
+import type { DiffSource } from "../sources/types.js";
 import { detectMonorepo } from "./monorepo-detector.js";
 import { parseReviews } from "./review-parser.js";
 import { analyzeSemanticDiff } from "./semantic-diff.js";
 
 /**
- * Deterministic spec generation from PR metadata.
+ * Deterministic spec generation from any DiffSource.
  * No LLM required — uses heuristics and templates.
  */
-export function generateSpec(pr: PRData, repo: string): PromptSpec {
-	const changeType = inferChangeType(pr);
-	const likelyGoal = inferGoal(pr);
-	const scope = inferScope(pr);
-	const constraints = inferConstraints(pr);
-	const acceptanceCriteria = inferAcceptanceCriteria(pr);
-	const verification = inferVerification(pr);
-	const risks = classifyRisks(pr.files);
-	const reviewSummary = parseReviews(pr);
-	const semanticChanges = analyzeSemanticDiff(pr.files);
-	const monorepo = detectMonorepo(pr.files);
-	const openQuestions = inferOpenQuestions(pr, risks);
-	const prompt = buildGenerationPrompt(pr, repo, likelyGoal, scope, constraints);
-	const decisionPrompt = buildDecisionPrompt(pr, repo, risks, constraints, changeType);
+export function generateSpec(source: DiffSource, repo?: string): PromptSpec {
+	const changeType = inferChangeType(source);
+	const likelyGoal = inferGoal(source);
+	const scope = inferScope(source);
+	const constraints = inferConstraints(source);
+	const acceptanceCriteria = inferAcceptanceCriteria(source);
+	const verification = inferVerification(source);
+	const risks = classifyRisks(source.files);
+	const semanticChanges = analyzeSemanticDiff(source.files);
+	const monorepo = detectMonorepo(source.files);
+	const openQuestions = inferOpenQuestions(source, risks);
+
+	const effectiveRepo = repo ?? source.repo ?? "local";
+	const prompt = buildGenerationPrompt(source, effectiveRepo, likelyGoal, scope, constraints);
+	const decisionPrompt = buildDecisionPrompt(source, effectiveRepo, risks, constraints, changeType);
+
+	const totalAdditions = source.files.reduce((sum, f) => sum + f.additions, 0);
+	const totalDeletions = source.files.reduce((sum, f) => sum + f.deletions, 0);
 
 	return {
 		version: 1,
 		generated_at: new Date().toISOString(),
 		source: {
-			repo,
-			pr_number: pr.number,
-			pr_url: pr.url,
-			base_branch: pr.base_branch,
-			head_branch: pr.head_branch,
-			author: pr.author,
+			repo: effectiveRepo,
+			pr_number: source.pr_number,
+			pr_url: source.pr_url,
+			base_branch: source.base_ref,
+			head_branch: source.head_ref,
+			author: source.author,
 		},
-		title: pr.title,
-		summary: buildSummary(pr, changeType),
+		title: source.title,
+		summary: buildSummary(source, changeType, totalAdditions, totalDeletions),
 		intent: {
 			likely_goal: likelyGoal,
 			change_type: changeType,
 		},
 		scope,
-		affected_files: pr.files.map(
+		affected_files: source.files.map(
 			(f): FileChange => ({
 				filename: f.filename,
-				status: normalizeStatus(f.status),
+				status: f.status,
 				additions: f.additions,
 				deletions: f.deletions,
 				patch: f.patch,
@@ -56,18 +62,29 @@ export function generateSpec(pr: PRData, repo: string): PromptSpec {
 		verification,
 		risk_flags: risks,
 		semantic_changes: semanticChanges.length > 0 ? semanticChanges : undefined,
-		review_summary: reviewSummary,
+		review_summary: undefined,
 		monorepo,
 		open_questions: openQuestions,
 		generation_prompt: prompt,
 		decision_prompt: decisionPrompt,
 		stats: {
-			files_changed: pr.changed_files,
-			additions: pr.additions,
-			deletions: pr.deletions,
-			commits: pr.commits,
+			files_changed: source.files.length,
+			additions: totalAdditions,
+			deletions: totalDeletions,
+			commits: source.commits ?? 0,
 		},
 	};
+}
+
+/**
+ * Backwards-compatible wrapper: generate spec from GitHub PRData.
+ */
+export function generateSpecFromPR(pr: PRData, repo: string): PromptSpec {
+	const source = githubPRtoDiffSource(pr, repo);
+	const spec = generateSpec(source, repo);
+	// Attach review summary (GitHub-specific)
+	const reviewSummary = parseReviews(pr);
+	return { ...spec, review_summary: reviewSummary };
 }
 
 function normalizeStatus(status: string): "added" | "removed" | "modified" | "renamed" | "copied" {
@@ -82,11 +99,14 @@ function normalizeStatus(status: string): "added" | "removed" | "modified" | "re
 	return map[status] ?? "modified";
 }
 
+// Keep normalizeStatus exported for tests that may import it
+export { normalizeStatus };
+
 function inferChangeType(
-	pr: PRData,
+	source: DiffSource,
 ): "feature" | "bugfix" | "refactor" | "docs" | "test" | "chore" | "config" | "mixed" {
-	const title = pr.title.toLowerCase();
-	const branch = pr.head_branch.toLowerCase();
+	const title = source.title.toLowerCase();
+	const branch = source.head_ref.toLowerCase();
 
 	if (/\b(fix|bug|patch|hotfix|issue)\b/.test(title) || branch.startsWith("fix/")) return "bugfix";
 	if (/\b(feat|feature|add|implement)\b/.test(title) || branch.startsWith("feat/"))
@@ -100,31 +120,31 @@ function inferChangeType(
 	if (/\b(config|setup|configure)\b/.test(title)) return "config";
 
 	// Check file patterns
-	const exts = pr.files.map((f) => f.filename.split(".").pop() ?? "");
+	const exts = source.files.map((f) => f.filename.split(".").pop() ?? "");
 	const allDocs = exts.every((e) => ["md", "txt", "rst", "adoc"].includes(e));
 	if (allDocs) return "docs";
 
-	const allTests = pr.files.every((f) => /\b(test|spec|__tests__)\b/i.test(f.filename));
+	const allTests = source.files.every((f) => /\b(test|spec|__tests__)\b/i.test(f.filename));
 	if (allTests) return "test";
 
 	return "mixed";
 }
 
-function inferGoal(pr: PRData): string {
-	// Use PR body first line or title as the goal basis
-	if (pr.body) {
-		const firstParagraph = pr.body.split("\n\n")[0].trim();
+function inferGoal(source: DiffSource): string {
+	// Use body first line or title as the goal basis
+	if (source.body) {
+		const firstParagraph = source.body.split("\n\n")[0].trim();
 		if (firstParagraph.length > 10 && firstParagraph.length < 500) {
 			return firstParagraph;
 		}
 	}
-	return `${pr.title} (inferred from PR title)`;
+	return `${source.title} (inferred from title)`;
 }
 
-function inferScope(pr: PRData): { include: string[]; exclude: string[] } {
+function inferScope(source: DiffSource): { include: string[]; exclude: string[] } {
 	// Group files by top-level directory paths
 	const dirs = new Set<string>();
-	for (const f of pr.files) {
+	for (const f of source.files) {
 		const parts = f.filename.split("/");
 		if (parts.length > 2) {
 			// Deep path: use top two directory segments as glob
@@ -140,19 +160,19 @@ function inferScope(pr: PRData): { include: string[]; exclude: string[] } {
 
 	return {
 		include: [...dirs].slice(0, 15),
-		exclude: ["Unrelated modules not touched by this PR"],
+		exclude: ["Unrelated modules not touched by this change"],
 	};
 }
 
-function inferConstraints(pr: PRData): string[] {
+function inferConstraints(source: DiffSource): string[] {
 	const constraints: string[] = [];
 
-	if (pr.files.some((f) => /test/i.test(f.filename))) {
+	if (source.files.some((f) => /test/i.test(f.filename))) {
 		constraints.push("Existing tests must continue to pass");
 	}
 
 	if (
-		pr.files.some(
+		source.files.some(
 			(f) =>
 				/\b(migration|migrate)\b/i.test(f.filename) ||
 				/\.sql$/.test(f.filename) ||
@@ -163,11 +183,11 @@ function inferConstraints(pr: PRData): string[] {
 		constraints.push("Database migrations must be backwards-compatible");
 	}
 
-	if (pr.files.some((f) => /api|route|endpoint/i.test(f.filename))) {
+	if (source.files.some((f) => /api|route|endpoint/i.test(f.filename))) {
 		constraints.push("API contracts must remain stable for existing clients");
 	}
 
-	if (pr.labels.includes("breaking-change")) {
+	if (source.labels?.includes("breaking-change")) {
 		constraints.push("This is a breaking change — requires version bump and migration guide");
 	}
 
@@ -175,17 +195,17 @@ function inferConstraints(pr: PRData): string[] {
 	return constraints;
 }
 
-function inferAcceptanceCriteria(pr: PRData): string[] {
+function inferAcceptanceCriteria(source: DiffSource): string[] {
 	const criteria: string[] = [];
 
-	criteria.push(`Changes apply cleanly to ${pr.base_branch}`);
+	criteria.push(`Changes apply cleanly to ${source.base_ref}`);
 	criteria.push("All existing tests pass");
 
-	if (pr.files.some((f) => f.status === "added")) {
+	if (source.files.some((f) => f.status === "added")) {
 		criteria.push("New files are properly integrated with existing module structure");
 	}
 
-	if (pr.files.some((f) => /test/i.test(f.filename))) {
+	if (source.files.some((f) => /test/i.test(f.filename))) {
 		criteria.push("New/modified tests cover the changed functionality");
 	}
 
@@ -193,15 +213,18 @@ function inferAcceptanceCriteria(pr: PRData): string[] {
 	return criteria;
 }
 
-function inferVerification(pr: PRData): { tests_required: string[]; manual_checks: string[] } {
+function inferVerification(source: DiffSource): {
+	tests_required: string[];
+	manual_checks: string[];
+} {
 	const tests: string[] = [];
 	const manual: string[] = [];
 
-	if (pr.files.some((f) => /test/i.test(f.filename))) {
+	if (source.files.some((f) => /test/i.test(f.filename))) {
 		tests.push("unit");
 	}
 
-	if (pr.files.some((f) => /integration|e2e/i.test(f.filename))) {
+	if (source.files.some((f) => /integration|e2e/i.test(f.filename))) {
 		tests.push("integration");
 	}
 
@@ -210,11 +233,11 @@ function inferVerification(pr: PRData): { tests_required: string[]; manual_check
 		manual.push("Verify no test coverage gaps introduced");
 	}
 
-	if (pr.files.some((f) => /api|route/i.test(f.filename))) {
+	if (source.files.some((f) => /api|route/i.test(f.filename))) {
 		manual.push("Verify API endpoint behavior manually");
 	}
 
-	if (pr.files.some((f) => /ui|component|page/i.test(f.filename))) {
+	if (source.files.some((f) => /ui|component|page/i.test(f.filename))) {
 		manual.push("Visual check of affected UI components");
 	}
 
@@ -222,43 +245,49 @@ function inferVerification(pr: PRData): { tests_required: string[]; manual_check
 }
 
 function inferOpenQuestions(
-	pr: PRData,
+	source: DiffSource,
 	risks: Array<{ category: string; severity: string }>,
 ): string[] {
 	const questions: string[] = [];
 
-	if (!pr.body || pr.body.trim().length < 20) {
-		questions.push("PR description is sparse — author should clarify the motivation");
+	if (!source.body || source.body.trim().length < 20) {
+		questions.push("Description is sparse — clarify the motivation for this change");
 	}
 
-	if (pr.files.length > 20) {
-		questions.push("Large changeset — could this be split into smaller PRs?");
+	if (source.files.length > 20) {
+		questions.push("Large changeset — could this be split into smaller changes?");
 	}
 
 	if (risks.some((r) => r.severity === "high")) {
 		questions.push("High-risk changes detected — has this been reviewed by a domain expert?");
 	}
 
-	if (pr.files.some((f) => f.status === "removed")) {
+	if (source.files.some((f) => f.status === "removed")) {
 		questions.push("Files were deleted — confirm no other modules depend on them");
 	}
 
 	return questions;
 }
 
-function buildSummary(pr: PRData, changeType: string): string {
-	const fileWord = pr.changed_files === 1 ? "file" : "files";
-	return `${capitalize(changeType)} PR by @${pr.author}: "${pr.title}" — ${pr.changed_files} ${fileWord} changed (+${pr.additions}/-${pr.deletions})`;
+function buildSummary(
+	source: DiffSource,
+	changeType: string,
+	additions: number,
+	deletions: number,
+): string {
+	const fileWord = source.files.length === 1 ? "file" : "files";
+	return `${capitalize(changeType)} by ${source.author}: "${source.title}" — ${source.files.length} ${fileWord} changed (+${additions}/-${deletions})`;
 }
 
 function buildGenerationPrompt(
-	pr: PRData,
+	source: DiffSource,
 	repo: string,
 	goal: string,
 	scope: { include: string[] },
 	constraints: string[],
 ): string {
-	const files = pr.files.map((f) => `  - ${f.filename} (${f.status})`).join("\n");
+	const files = source.files.map((f) => `  - ${f.filename} (${f.status})`).join("\n");
+	const ref = source.pr_url ? `Original PR: ${source.pr_url}` : `Branch: ${source.head_ref}`;
 
 	return `Re-implement the following change for the ${repo} repository.
 
@@ -266,8 +295,8 @@ function buildGenerationPrompt(
 ${goal}
 
 ## Branch
-Apply changes to: ${pr.base_branch}
-Original branch: ${pr.head_branch}
+Apply changes to: ${source.base_ref}
+Original branch: ${source.head_ref}
 
 ## Affected Files
 ${files}
@@ -279,15 +308,15 @@ Focus on: ${scope.include.join(", ")}
 ${constraints.map((c) => `- ${c}`).join("\n")}
 
 ## Reference
-Original PR: ${pr.url}
-Author: @${pr.author}
+${ref}
+Author: ${source.author}
 
 Implement this change following the repository's existing patterns and conventions.
 Ensure all tests pass after making the changes.`;
 }
 
 function buildDecisionPrompt(
-	pr: PRData,
+	source: DiffSource,
 	repo: string,
 	risks: Array<{ category: string; severity: string; description: string }>,
 	constraints: string[],
@@ -301,18 +330,21 @@ function buildDecisionPrompt(
 			: "No risk flags detected.";
 
 	const constraintSection = constraints.map((c) => `- ${c}`).join("\n");
+	const totalAdditions = source.files.reduce((sum, f) => sum + f.additions, 0);
+	const totalDeletions = source.files.reduce((sum, f) => sum + f.deletions, 0);
+	const prRef = source.pr_number ? `PR #${source.pr_number} in ` : "Change in ";
 
-	return `You are reviewing PR #${pr.number} in ${repo}.
+	return `You are reviewing ${prRef}${repo}.
 
 ## Decision Required
-Should this pull request be approved, request changes, or need more information?
+Should this change be approved, request changes, or need more information?
 
-## PR Context
-- **Title:** ${pr.title}
-- **Author:** @${pr.author}
+## Context
+- **Title:** ${source.title}
+- **Author:** ${source.author}
 - **Type:** ${changeType}
-- **Files changed:** ${pr.changed_files} (+${pr.additions}/-${pr.deletions})
-- **Branch:** ${pr.head_branch} → ${pr.base_branch}
+- **Files changed:** ${source.files.length} (+${totalAdditions}/-${totalDeletions})
+- **Branch:** ${source.head_ref} → ${source.base_ref}
 
 ## Risk Assessment
 ${riskSection}
@@ -323,7 +355,7 @@ ${constraintSection}
 ## Questions to Answer
 1. Does this change align with the repository's architecture and conventions?
 2. Are there any security implications not covered by the risk flags?
-3. Is the scope appropriate, or should this be split into smaller PRs?
+3. Is the scope appropriate, or should this be split into smaller changes?
 4. Are edge cases and error handling adequately addressed?
 5. Will this change be maintainable long-term?
 

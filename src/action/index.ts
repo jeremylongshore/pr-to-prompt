@@ -7,7 +7,7 @@ import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { resolve } from "node:path";
 import { type AIEnhanceOptions, enhanceSpec } from "../core/ai/enhancer.js";
 import { createClient, fetchPR } from "../core/github/client.js";
-import { generateSpec } from "../core/parsing/pr-parser.js";
+import { generateSpecFromPR } from "../core/parsing/pr-parser.js";
 import { renderComment } from "../core/rendering/comment.js";
 import { renderJson } from "../core/rendering/json.js";
 import { renderMarkdown } from "../core/rendering/markdown.js";
@@ -108,7 +108,7 @@ async function main(): Promise<void> {
 	console.log("::endgroup::");
 
 	console.log("::group::Generating prompt-spec");
-	let spec = generateSpec(prData, repoFull);
+	let spec = generateSpecFromPR(prData, repoFull);
 
 	if (inputs.aiEnhance && inputs.aiApiKey) {
 		console.log(`Enhancing with AI (${inputs.aiProvider})...`);
