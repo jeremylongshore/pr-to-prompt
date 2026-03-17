@@ -1,6 +1,12 @@
 import type { PRData } from "../github/client.js";
 import { classifyRisks } from "../risk/classifier.js";
-import type { FileChange, PromptSpec } from "../schema/prompt-spec.js";
+import {
+	computeContentHash,
+	computeFragmentId,
+	type FileChange,
+	type PromptSpec,
+	type SpecFragment,
+} from "../schema/prompt-spec.js";
 import { githubPRtoDiffSource } from "../sources/github.js";
 import type { DiffSource } from "../sources/types.js";
 import { detectMonorepo } from "./monorepo-detector.js";
@@ -30,7 +36,7 @@ export function generateSpec(source: DiffSource, repo?: string): PromptSpec {
 	const totalAdditions = source.files.reduce((sum, f) => sum + f.additions, 0);
 	const totalDeletions = source.files.reduce((sum, f) => sum + f.deletions, 0);
 
-	return {
+	const spec: PromptSpec = {
 		version: 1,
 		generated_at: new Date().toISOString(),
 		source: {
@@ -74,6 +80,8 @@ export function generateSpec(source: DiffSource, repo?: string): PromptSpec {
 			commits: source.commits ?? 0,
 		},
 	};
+
+	return { ...spec, fragments: decomposeIntoFragments(spec) };
 }
 
 /**
@@ -370,6 +378,73 @@ Include a brief rationale (2-3 sentences) for your decision.`;
 
 function capitalize(s: string): string {
 	return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/**
+ * Decompose a PromptSpec into independently hashable SpecFragments.
+ * Each fragment captures a logical section of the spec, with DAG edges
+ * (parent_fragment_ids) expressing upstream dependencies.
+ */
+export function decomposeIntoFragments(spec: PromptSpec): SpecFragment[] {
+	const fragments: SpecFragment[] = [];
+
+	function makeFragment(
+		fragment_type: SpecFragment["fragment_type"],
+		content: unknown,
+		parent_fragment_ids: string[],
+	): SpecFragment {
+		const content_hash = computeContentHash(content);
+		return {
+			fragment_id: computeFragmentId(content_hash),
+			fragment_type,
+			content,
+			content_hash,
+			parent_fragment_ids,
+		};
+	}
+
+	// intent — no parents (root fragment)
+	const intentFragment = makeFragment(
+		"intent",
+		{ likely_goal: spec.intent.likely_goal, change_type: spec.intent.change_type },
+		[],
+	);
+	fragments.push(intentFragment);
+
+	// scope — parent: intent
+	const scopeFragment = makeFragment("scope", spec.scope, [intentFragment.fragment_id]);
+	fragments.push(scopeFragment);
+
+	// files — parent: scope
+	const filesContent = spec.affected_files.map((f) => ({ filename: f.filename, status: f.status }));
+	const filesFragment = makeFragment("files", filesContent, [scopeFragment.fragment_id]);
+	fragments.push(filesFragment);
+
+	// constraints — parent: intent
+	const constraintsFragment = makeFragment("constraints", spec.constraints, [
+		intentFragment.fragment_id,
+	]);
+	fragments.push(constraintsFragment);
+
+	// verification — parent: intent
+	const verificationFragment = makeFragment("verification", spec.verification, [
+		intentFragment.fragment_id,
+	]);
+	fragments.push(verificationFragment);
+
+	// risks — parent: files
+	const risksFragment = makeFragment("risks", spec.risk_flags, [filesFragment.fragment_id]);
+	fragments.push(risksFragment);
+
+	// semantics — only if spec.semantic_changes exists, parent: files
+	if (spec.semantic_changes !== undefined) {
+		const semanticsFragment = makeFragment("semantics", spec.semantic_changes, [
+			filesFragment.fragment_id,
+		]);
+		fragments.push(semanticsFragment);
+	}
+
+	return fragments;
 }
 
 /**

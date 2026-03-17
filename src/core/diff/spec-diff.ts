@@ -1,4 +1,11 @@
-import type { PromptSpec } from "../schema/prompt-spec.js";
+import type { PromptSpec, SpecFragment } from "../schema/prompt-spec.js";
+
+export interface FragmentDiff {
+	fragment_type: string;
+	status: "unchanged" | "changed" | "added" | "removed";
+	previous_hash?: string;
+	current_hash?: string;
+}
 
 export interface SpecDiff {
 	changed: boolean;
@@ -110,8 +117,69 @@ export function diffSpecs(previous: PromptSpec, current: PromptSpec): SpecDiff {
 		sections.push({ section: "review_status", type: "changed", details: `${prev} → ${curr}` });
 	}
 
+	// Fragment-level diff — only when both specs carry fragments
+	if (previous.fragments !== undefined && current.fragments !== undefined) {
+		const fragmentDiffs = diffFragments(previous.fragments, current.fragments);
+		const changed = fragmentDiffs.filter((d) => d.status !== "unchanged");
+		if (changed.length > 0) {
+			const summary = changed.map((d) => `${d.fragment_type}:${d.status}`).join(", ");
+			sections.push({
+				section: "fragments",
+				type: "changed",
+				details: summary,
+			});
+		}
+	}
+
 	return {
 		changed: sections.length > 0,
 		sections,
 	};
+}
+
+/**
+ * Compare two arrays of SpecFragments by fragment_type, returning a diff entry
+ * per type that appears in either array.
+ */
+export function diffFragments(previous: SpecFragment[], current: SpecFragment[]): FragmentDiff[] {
+	const prevByType = new Map(previous.map((f) => [f.fragment_type, f]));
+	const currByType = new Map(current.map((f) => [f.fragment_type, f]));
+
+	const allTypes = new Set([...prevByType.keys(), ...currByType.keys()]);
+	const diffs: FragmentDiff[] = [];
+
+	for (const type of allTypes) {
+		const prev = prevByType.get(type);
+		const curr = currByType.get(type);
+
+		if (prev === undefined) {
+			diffs.push({
+				fragment_type: type,
+				status: "added",
+				current_hash: curr!.content_hash,
+			});
+		} else if (curr === undefined) {
+			diffs.push({
+				fragment_type: type,
+				status: "removed",
+				previous_hash: prev.content_hash,
+			});
+		} else if (prev.content_hash === curr.content_hash) {
+			diffs.push({
+				fragment_type: type,
+				status: "unchanged",
+				previous_hash: prev.content_hash,
+				current_hash: curr.content_hash,
+			});
+		} else {
+			diffs.push({
+				fragment_type: type,
+				status: "changed",
+				previous_hash: prev.content_hash,
+				current_hash: curr.content_hash,
+			});
+		}
+	}
+
+	return diffs;
 }

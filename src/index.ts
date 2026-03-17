@@ -14,8 +14,16 @@ export { renderJson } from "./core/rendering/json.js";
 export { githubPRtoDiffSource } from "./core/sources/github.js";
 export { buildLocalDiffSource, parseDiffStat, parseNameStatus } from "./core/sources/local.js";
 export type { DiffSource, DiffFile } from "./core/sources/types.js";
-export { IntentSchema, type Intent } from "./core/intent/schema.js";
+export {
+	IntentSchema,
+	IntentLayerSchema,
+	LayeredIntentSchema,
+	type Intent,
+	type IntentLayer,
+	type LayeredIntent,
+} from "./core/intent/schema.js";
 export { readIntent, writeIntent } from "./core/intent/storage.js";
+export { mergeIntents, flattenToIntent, singleLayerIntent } from "./core/intent/composition.js";
 export { detectDrift, detectDriftWithSpec } from "./core/drift/detector.js";
 export type { DriftSignal, DriftSignalType } from "./core/drift/signals.js";
 export { buildEnvelope } from "./core/protocol/envelope.js";
