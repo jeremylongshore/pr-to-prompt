@@ -3,7 +3,8 @@ export type DriftSignalType =
 	| "forbidden_touch"
 	| "risk_escalation"
 	| "size_overrun"
-	| "type_mismatch";
+	| "type_mismatch"
+	| "assumption_violation";
 
 export interface DriftSignal {
 	type: DriftSignalType;

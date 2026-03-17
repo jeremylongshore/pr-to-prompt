@@ -1,6 +1,7 @@
 import type { Intent } from "../intent/schema.js";
 import type { DiffSource } from "../sources/types.js";
-import type { DriftSignal } from "./signals.js";
+import { analyzeAssumptions } from "../decisions/classifier.js";
+import type { DriftSignal, DriftSignalType } from "./signals.js";
 
 /** Simple glob matcher — supports * and ** patterns */
 function matchesGlob(filename: string, pattern: string): boolean {
@@ -66,6 +67,27 @@ export function detectDrift(diff: DiffSource, intent: Intent): DriftSignal[] {
 }
 
 /**
+ * Detect assumption violations — decisions that were classified as must_ask
+ * but no confirmation was provided.
+ */
+export function detectAssumptionViolations(
+	diff: DiffSource,
+	intent: Intent,
+): DriftSignal[] {
+	const decisions = analyzeAssumptions(diff, intent);
+	const mustAsk = decisions.filter((d) => d.action === "must_ask");
+
+	return mustAsk.map((d) => ({
+		type: "assumption_violation" as DriftSignalType,
+		description: d.question,
+		severity: "high" as const,
+		details: d.context
+			? [d.context, `category: ${d.category}`]
+			: [`category: ${d.category}`],
+	}));
+}
+
+/**
  * Detect drift with full spec context (risk flags, change type).
  * This is the primary entry point from the check command.
  */
@@ -99,6 +121,10 @@ export function detectDriftWithSpec(
 			details: [`inferred: ${specChangeType}`, `expected: ${intent.expected_type}`],
 		});
 	}
+
+	// assumption_violation — unconfirmed must_ask decisions
+	const violations = detectAssumptionViolations(diff, intent);
+	signals.push(...violations);
 
 	return signals;
 }

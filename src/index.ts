@@ -24,7 +24,39 @@ export {
 } from "./core/intent/schema.js";
 export { readIntent, writeIntent } from "./core/intent/storage.js";
 export { mergeIntents, flattenToIntent, singleLayerIntent } from "./core/intent/composition.js";
-export { detectDrift, detectDriftWithSpec } from "./core/drift/detector.js";
+export { detectDrift, detectDriftWithSpec, detectAssumptionViolations } from "./core/drift/detector.js";
 export type { DriftSignal, DriftSignalType } from "./core/drift/signals.js";
+export {
+	classifyDecision,
+	analyzeAssumptions,
+	type DecisionAction,
+	type Decision,
+} from "./core/decisions/classifier.js";
 export { buildEnvelope } from "./core/protocol/envelope.js";
 export type { AgentProtocolEnvelope, ProtocolStatus } from "./core/protocol/envelope.js";
+// Graph engine
+export {
+	IntentNodeSchema,
+	IntentNodeTypeSchema,
+	IntentNodeSourceSchema,
+	type IntentNode,
+	type IntentNodeType,
+	type IntentNodeSource,
+} from "./core/graph/node.js";
+export {
+	IntentEdgeSchema,
+	IntentGraphSchema,
+	EdgeTypeSchema,
+	type IntentEdge,
+	type IntentGraph,
+	type EdgeType,
+} from "./core/graph/edge.js";
+export {
+	propagateInvalidation,
+	getStaleNodes,
+	clearInvalidation,
+	upsertNode,
+	addEdge,
+	createEmptyGraph,
+} from "./core/graph/propagation.js";
+export { readGraph, writeGraph, getGraphPath } from "./core/graph/storage.js";

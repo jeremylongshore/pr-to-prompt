@@ -130,6 +130,7 @@ export const PromptSpecSchema = z.object({
 					"risk_escalation",
 					"size_overrun",
 					"type_mismatch",
+					"assumption_violation",
 				]),
 				description: z.string(),
 				severity: z.enum(["low", "medium", "high"]),
