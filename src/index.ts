@@ -14,3 +14,5 @@ export { renderJson } from "./core/rendering/json.js";
 export { githubPRtoDiffSource } from "./core/sources/github.js";
 export { buildLocalDiffSource, parseDiffStat, parseNameStatus } from "./core/sources/local.js";
 export type { DiffSource, DiffFile } from "./core/sources/types.js";
+export { IntentSchema, type Intent } from "./core/intent/schema.js";
+export { readIntent, writeIntent } from "./core/intent/storage.js";
