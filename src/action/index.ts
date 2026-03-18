@@ -62,12 +62,54 @@ function getEventPayload(): { owner: string; repo: string; prNumber: number } {
 	return { owner, repo, prNumber };
 }
 
+function validateWebhookUrl(url: string): void {
+	let parsed: URL;
+	try {
+		parsed = new URL(url);
+	} catch {
+		throw new Error("Webhook URL is not a valid URL");
+	}
+
+	if (parsed.protocol !== "https:") {
+		throw new Error("Webhook URL must use HTTPS");
+	}
+
+	const hostname = parsed.hostname.toLowerCase();
+	const blocked = [
+		"localhost",
+		"127.0.0.1",
+		"0.0.0.0",
+		"[::1]",
+	];
+	if (blocked.includes(hostname)) {
+		throw new Error("Webhook URL must not point to localhost");
+	}
+
+	// Block private/link-local IP ranges
+	const privatePatterns = [
+		/^10\./,
+		/^172\.(1[6-9]|2\d|3[01])\./,
+		/^192\.168\./,
+		/^169\.254\./,
+		/^fc00:/i,
+		/^fd/i,
+		/^fe80:/i,
+	];
+	for (const pattern of privatePatterns) {
+		if (pattern.test(hostname)) {
+			throw new Error("Webhook URL must not point to a private or link-local address");
+		}
+	}
+}
+
 async function sendWebhook(
 	url: string,
 	spec: PromptSpec,
 	repo: string,
 	prNumber: number,
 ): Promise<void> {
+	validateWebhookUrl(url);
+
 	const payload = JSON.stringify({
 		event: "spec_generated",
 		repo,
@@ -80,15 +122,16 @@ async function sendWebhook(
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
-			"User-Agent": "pr-to-spec/0.6.0",
+			"User-Agent": "pr-to-spec/0.8.0",
 		},
 		body: payload,
 	});
 
+	const maskedUrl = maskUrl(url);
 	if (!response.ok) {
-		console.warn(`::warning::Webhook POST to ${url} failed with status ${response.status}`);
+		console.warn(`::warning::Webhook POST to ${maskedUrl} failed with status ${response.status}`);
 	} else {
-		console.log(`Webhook delivered to ${url} (${response.status})`);
+		console.log(`Webhook delivered to ${maskedUrl} (${response.status})`);
 	}
 }
 
@@ -176,6 +219,15 @@ async function main(): Promise<void> {
 		});
 		console.log(`Comment posted on PR #${prNumber}`);
 		console.log("::endgroup::");
+	}
+}
+
+function maskUrl(url: string): string {
+	try {
+		const parsed = new URL(url);
+		return `${parsed.protocol}//${parsed.hostname}/***`;
+	} catch {
+		return "***";
 	}
 }
 

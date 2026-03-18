@@ -1,4 +1,3 @@
-import { execSync } from "node:child_process";
 import type { PromptSpec } from "../schema/prompt-spec.js";
 import type { DiffSource } from "../sources/types.js";
 import type { Contract, ContractResult, ContractType } from "./schema.js";
@@ -158,21 +157,12 @@ const checkers: Record<ContractType, Checker> = {
 		};
 	},
 
-	custom_command: (params) => {
-		const cmd = params.cmd as string;
-		if (!cmd) {
-			return { passed: false, detail: "No command specified" };
-		}
-		try {
-			execSync(cmd, { stdio: "pipe", timeout: 60_000 });
-			return { passed: true, detail: `Command succeeded: ${cmd}` };
-		} catch (err) {
-			const message = err instanceof Error ? err.message : String(err);
-			return {
-				passed: false,
-				detail: `Command failed: ${cmd} — ${message.split("\n")[0]}`,
-			};
-		}
+	custom_command: () => {
+		return {
+			passed: false,
+			detail:
+				"custom_command contract type has been removed for security reasons (arbitrary command execution). Use a CI step or pre-commit hook instead.",
+		};
 	},
 };
 

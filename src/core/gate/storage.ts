@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { type IntentGatePolicy, IntentGatePolicySchema } from "./policy.js";
 
-const GATE_DIR = ".pr-to-spec";
+const GATE_DIR = process.env.PR_TO_SPEC_DIR ?? ".pr-to-spec";
 const POLICY_FILE = "policy.yaml";
 
 export function getPolicyPath(cwd: string = process.cwd()): string {

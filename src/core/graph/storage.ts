@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { type IntentGraph, IntentGraphSchema } from "./edge.js";
 import { createEmptyGraph } from "./propagation.js";
 
-const GRAPH_DIR = ".pr-to-spec";
+const GRAPH_DIR = process.env.PR_TO_SPEC_DIR ?? ".pr-to-spec";
 const GRAPH_FILE = "graph.json";
 
 export function getGraphPath(cwd: string = process.cwd()): string {

@@ -124,11 +124,21 @@ export function buildLocalDiffSource(opts: LocalDiffOptions = {}): DiffSource {
 	}
 
 	// Get name-status for file statuses
-	const nameStatus = execSync(`git diff --name-status ${diffArgs}`, { cwd, encoding: "utf8" });
+	let nameStatus: string;
+	let diffStat: string;
+	try {
+		nameStatus = execSync(`git diff --name-status ${diffArgs}`, { cwd, encoding: "utf8" });
+	} catch (err) {
+		throw mapGitError(err, `git diff --name-status ${diffArgs}`, cwd);
+	}
 	const statuses = parseNameStatus(nameStatus);
 
 	// Get diff --stat for additions/deletions counts
-	const diffStat = execSync(`git diff --stat ${diffArgs}`, { cwd, encoding: "utf8" });
+	try {
+		diffStat = execSync(`git diff --stat ${diffArgs}`, { cwd, encoding: "utf8" });
+	} catch (err) {
+		throw mapGitError(err, `git diff --stat ${diffArgs}`, cwd);
+	}
 	const stats = parseDiffStat(diffStat);
 
 	// Merge the two
@@ -159,4 +169,27 @@ export function buildLocalDiffSource(opts: LocalDiffOptions = {}): DiffSource {
 		commits,
 		source_type: sourceType,
 	};
+}
+
+function mapGitError(err: unknown, command: string, cwd: string): Error {
+	const stderr =
+		err && typeof err === "object" && "stderr" in err ? String((err as { stderr: unknown }).stderr) : "";
+	const message = err instanceof Error ? err.message : String(err);
+
+	if (/not a git repository/i.test(stderr) || /not a git repository/i.test(message)) {
+		return new Error(
+			`Not a git repository: ${cwd}\nRun this command from inside a git repo, or use --repo to analyze a GitHub PR instead.`,
+		);
+	}
+
+	if (/unknown revision/i.test(stderr) || /unknown revision/i.test(message)) {
+		const refMatch = stderr.match(/unknown revision.*?'([^']+)'/i) ??
+			message.match(/unknown revision.*?'([^']+)'/i);
+		const ref = refMatch?.[1] ?? "the specified ref";
+		return new Error(
+			`Branch or ref '${ref}' not found. Check that it exists with: git branch -a`,
+		);
+	}
+
+	return new Error(`Git command failed: ${command}\n${stderr || message}`);
 }

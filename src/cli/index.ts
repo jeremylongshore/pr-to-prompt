@@ -21,7 +21,7 @@ import { scanCommand } from "./scan.js";
 program
 	.name("pr-to-spec")
 	.description("Convert code changes into structured, agent-consumable spec artifacts")
-	.version("0.6.0")
+	.version("0.8.0")
 	.requiredOption("--repo <owner/name>", "GitHub repository (owner/name)")
 	.requiredOption("--pr <number>", "Pull request number", Number.parseInt)
 	.option("--out <directory>", "Output directory", "./output")
@@ -35,6 +35,7 @@ program
 	.option("--ai-enhance", "Enhance spec with AI-generated insights", false)
 	.option("--ai-provider <provider>", "AI provider: anthropic, openai", "anthropic")
 	.option("--ai-model <model>", "AI model override")
+	.option("--debug", "Log git commands, API URLs, and timing info", false)
 	.action(async (opts) => {
 		try {
 			const exitCode = await run(opts);
@@ -62,6 +63,7 @@ interface CLIOptions {
 	aiEnhance: boolean;
 	aiProvider: string;
 	aiModel?: string;
+	debug: boolean;
 }
 
 function log(opts: CLIOptions, ...args: unknown[]): void {
@@ -95,8 +97,15 @@ async function run(opts: CLIOptions): Promise<number> {
 	}
 
 	log(opts, `Fetching PR #${opts.pr} from ${opts.repo}...`);
+	if (opts.debug) {
+		console.error(`[debug] API: GET /repos/${owner}/${repo}/pulls/${opts.pr}`);
+	}
+	const startTime = opts.debug ? Date.now() : 0;
 	const octokit = createClient(token);
 	const prData = await fetchPR(octokit, owner, repo, opts.pr);
+	if (opts.debug) {
+		console.error(`[debug] Fetched PR in ${Date.now() - startTime}ms (${prData.files.length} files)`);
+	}
 
 	log(opts, `Generating prompt-spec for: "${prData.title}"`);
 	let spec = generateSpecFromPR(prData, opts.repo);
@@ -199,9 +208,11 @@ async function run(opts: CLIOptions): Promise<number> {
  * e.g., "risk_flags" -> spec.risk_flags, "source.author" -> spec.source.author
  */
 function extractField(obj: Record<string, unknown>, path: string): unknown {
+	const BLOCKED_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 	const parts = path.split(".");
 	let current: unknown = obj;
 	for (const part of parts) {
+		if (BLOCKED_KEYS.has(part)) return undefined;
 		if (current === null || current === undefined || typeof current !== "object") {
 			return undefined;
 		}

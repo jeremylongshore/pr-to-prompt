@@ -105,6 +105,7 @@ All `--json` output is wrapped in the agent protocol envelope:
 | `1` | Error |
 | `2` | High-risk changes detected |
 | `3` | Drift from declared intent |
+| `4` | Gate policy failed |
 
 ### Drift Signals
 
@@ -135,6 +136,7 @@ Options:
   --json                   Shorthand for --format json --stdout --quiet
   --comment                Post spec summary as a PR comment
   --ai-enhance             Enhance spec with AI-generated insights
+  --debug                  Log API requests, git commands, and timing
   -V, --version            Show version
   -h, --help               Show help
 ```
@@ -154,10 +156,18 @@ Options:
   --field <path>           Extract a single field
 ```
 
-### `pr-to-spec intent set`
+### `pr-to-spec intent` (manage intent declaration)
 
 ```
-Options:
+Subcommands:
+  set                      Set the intent for this project
+  show                     Show the current intent
+  analyze                  Analyze assumptions and surface decisions
+  approve                  Approve the current intent (draft → approved)
+  lock                     Lock the current intent (approved → locked)
+  gate                     Evaluate intent gate policy
+
+intent set Options:
   --goal <text>            What this change is trying to achieve (required)
   --scope <glob...>        Expected file globs (repeatable)
   --forbid <glob...>       Forbidden file globs (repeatable)
@@ -167,7 +177,7 @@ Options:
   --json                   Output as JSON
 ```
 
-### `pr-to-spec check`
+### `pr-to-spec check` (drift detection)
 
 ```
 Options:
@@ -176,6 +186,56 @@ Options:
   --staged                 Analyze staged changes only
   --quiet                  Suppress logging
   --json                   Output as JSON agent protocol envelope
+```
+
+### `pr-to-spec contract` (verification contracts)
+
+```
+Subcommands:
+  add                      Add a new contract
+  list                     List all contracts
+  remove                   Remove a contract by ID
+
+contract add Options:
+  --type <type>            Contract type (required)
+  --description <text>     Contract description
+  --params <json>          Contract parameters as JSON
+  --severity <level>       blocking or warning (default: blocking)
+  --json                   Output as JSON
+
+Contract types: no_new_dependencies, no_file_outside_scope,
+  max_files_changed, no_pattern_in_diff, require_pattern_in_diff,
+  no_new_exports
+```
+
+### `pr-to-spec graph` (intent DAG)
+
+```
+Subcommands:
+  query                    Query ancestors or descendants of a node
+  impact                   Show nodes impacted by changes
+  stats                    Show graph statistics
+
+graph query Options:
+  --node <id>              Node ID to query (required)
+  --direction <dir>        up (ancestors) or down (descendants)
+  --json                   Output as JSON
+```
+
+### `pr-to-spec feedback` (review/CI feedback)
+
+```
+Subcommands:
+  review                   Ingest a code review result
+  ci                       Ingest CI pipeline results
+  status                   Show current feedback and graph status
+
+feedback review Options:
+  --reviewer <name>        Reviewer name (required)
+  --status <status>        approved, changes_requested, commented (required)
+  --comment <text...>      Review comments (repeatable)
+  --target <id...>         Target node IDs (required)
+  --json                   Output as JSON
 ```
 
 ---
@@ -190,7 +250,7 @@ on:
     types: [opened, synchronize]
 
 permissions:
-  contents: write
+  contents: read
   pull-requests: write
 
 jobs:
@@ -271,6 +331,29 @@ src/
 | `GITHUB_TOKEN` | For GitHub PRs | GitHub token with PR read access |
 | `ANTHROPIC_API_KEY` | No | For AI-enhanced summaries |
 | `OPENAI_API_KEY` | No | Alternative AI provider |
+| `PR_TO_SPEC_DIR` | No | Config directory (default: `.pr-to-spec`) |
+
+---
+
+## Troubleshooting
+
+**"GitHub token is invalid or expired"**
+Your `GITHUB_TOKEN` has expired or is malformed. Generate a new one with `repo` scope (or fine-grained: pull requests read access).
+
+**"PR #N not found in owner/repo"**
+The PR doesn't exist, or your token doesn't have access to this repo. Check the repo name (`owner/name`) and PR number.
+
+**"GitHub API rate limit exceeded"**
+You've hit the GitHub API rate limit. Wait for the reset time shown in the error, or use a token with higher limits.
+
+**"Not a git repository"**
+Run `pr-to-spec scan` or `pr-to-spec check` from inside a git repository. For GitHub PRs, use `--repo` and `--pr` instead.
+
+**"Branch or ref 'X' not found"**
+The branch you specified with `--branch` doesn't exist locally. Check with `git branch -a`.
+
+**"PR has 300+ files; results may be incomplete"**
+GitHub's API returns at most 300 files per page. Very large PRs may have truncated file lists.
 
 ---
 

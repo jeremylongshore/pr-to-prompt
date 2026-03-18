@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-03-18
+
+### Security
+- **Removed `custom_command` contract type** — eliminated command injection vector from arbitrary shell execution. The type is preserved in the schema but always fails with a clear deprecation message.
+- **Webhook SSRF prevention** — validates webhook URLs: requires HTTPS, rejects localhost, private IPs (10.x, 172.16-31.x, 192.168.x), and link-local addresses (169.254.x).
+- **Reduced GitHub Action permissions** — `contents: write` → `contents: read` (the action only reads PRs and posts comments).
+- **Prototype pollution guard** — `--field` extraction blocks `__proto__`, `constructor`, and `prototype` traversal.
+- **Secret masking** — webhook URLs are masked in error output to prevent leaking sensitive endpoints.
+
+### Fixed
+- **Version sync** — CLI and Action version strings updated from stale `0.6.0` to `0.8.0`
+- **API error messages** — GitHub API errors now return user-friendly messages instead of raw Octokit exceptions (401, 403, 404, 422, rate limit)
+- **Git error messages** — `scan`/`check` commands now surface clear messages for "not a git repo" and "unknown revision" errors
+- **Large PR warning** — warns when GitHub API returns 300 files (the per-page maximum), indicating truncation
+
+### Added
+- `--debug` flag for CLI — logs API request URLs, git commands, and timing info to stderr
+- `PR_TO_SPEC_DIR` env var — configurable storage directory (default: `.pr-to-spec`)
+- Security test suite (`tests/security.test.ts`) — webhook URL validation, custom_command rejection, prototype pollution guard
+- API error test suite (`tests/github-errors.test.ts`) — 401, 403, 404, 422, rate limit, large PR truncation
+- README: documented all subcommands (`intent`, `check`, `contract`, `graph`, `feedback`)
+- README: exit code 4 (`gate_failed`)
+- README: troubleshooting section with common errors
+
+### Changed
+- 384 tests passing (all existing tests updated for security changes)
+
 ## [0.7.0] - 2026-03-17
 
 ### Added
