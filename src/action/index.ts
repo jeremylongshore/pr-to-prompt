@@ -75,12 +75,7 @@ function validateWebhookUrl(url: string): void {
 	}
 
 	const hostname = parsed.hostname.toLowerCase();
-	const blocked = [
-		"localhost",
-		"127.0.0.1",
-		"0.0.0.0",
-		"[::1]",
-	];
+	const blocked = ["localhost", "127.0.0.1", "0.0.0.0", "[::1]"];
 	if (blocked.includes(hostname)) {
 		throw new Error("Webhook URL must not point to localhost");
 	}
