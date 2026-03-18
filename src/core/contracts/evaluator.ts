@@ -9,39 +9,57 @@ type Checker = (
 	spec: PromptSpec,
 ) => { passed: boolean; detail: string };
 
-const DEPENDENCY_FILES = new Set([
-	"package.json",
+const DEPENDENCY_LOCK_FILES = new Set([
 	"package-lock.json",
 	"pnpm-lock.yaml",
 	"yarn.lock",
-	"Gemfile",
 	"Gemfile.lock",
-	"requirements.txt",
-	"Pipfile",
 	"Pipfile.lock",
 	"poetry.lock",
-	"Cargo.toml",
 	"Cargo.lock",
-	"go.mod",
 	"go.sum",
-	"composer.json",
 	"composer.lock",
+]);
+
+const DEPENDENCY_MANIFEST_FILES = new Set([
+	"package.json",
+	"Gemfile",
+	"requirements.txt",
+	"Pipfile",
+	"Cargo.toml",
+	"go.mod",
+	"composer.json",
 ]);
 
 const checkers: Record<ContractType, Checker> = {
 	no_new_dependencies: (_params, diff) => {
-		const depFiles = diff.files.filter(
+		// Lock files changing always signals dependency changes
+		const lockFiles = diff.files.filter(
 			(f) =>
-				DEPENDENCY_FILES.has(f.filename.split("/").pop() ?? "") &&
+				DEPENDENCY_LOCK_FILES.has(f.filename.split("/").pop() ?? "") &&
 				(f.status === "added" || f.status === "modified"),
 		);
-		if (depFiles.length === 0) {
-			return { passed: true, detail: "No dependency file changes" };
+		if (lockFiles.length > 0) {
+			return {
+				passed: false,
+				detail: `Dependency lock files changed: ${lockFiles.map((f) => f.filename).join(", ")}`,
+			};
 		}
-		return {
-			passed: false,
-			detail: `Dependency files changed: ${depFiles.map((f) => f.filename).join(", ")}`,
-		};
+		// For manifest files, check if the patch contains dependency-section additions
+		const manifestFiles = diff.files.filter(
+			(f) =>
+				DEPENDENCY_MANIFEST_FILES.has(f.filename.split("/").pop() ?? "") &&
+				(f.status === "added" || f.status === "modified") &&
+				f.patch &&
+				/^\+.*"(dependencies|devDependencies|peerDependencies|optionalDependencies)"/m.test(f.patch),
+		);
+		if (manifestFiles.length > 0) {
+			return {
+				passed: false,
+				detail: `Dependency sections modified: ${manifestFiles.map((f) => f.filename).join(", ")}`,
+			};
+		}
+		return { passed: true, detail: "No dependency changes detected" };
 	},
 
 	no_file_outside_scope: (params, diff) => {

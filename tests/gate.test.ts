@@ -250,6 +250,7 @@ describe("IntentSchema — status and approval", () => {
 		if (result.success) {
 			expect(result.data.status).toBe("draft");
 			expect(result.data.approved_by).toBeUndefined();
+			expect(result.data.approved_at).toBeUndefined();
 		}
 	});
 });

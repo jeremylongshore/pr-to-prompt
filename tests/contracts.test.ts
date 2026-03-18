@@ -117,10 +117,16 @@ describe("evaluateContracts — no_new_dependencies", () => {
 		expect(results[0].passed).toBe(true);
 	});
 
-	it("fails when package.json is modified", () => {
+	it("fails when package.json dependency section is modified", () => {
 		const diff = makeDiff({
 			files: [
-				{ filename: "package.json", status: "modified", additions: 5, deletions: 1 },
+				{
+					filename: "package.json",
+					status: "modified",
+					additions: 5,
+					deletions: 1,
+					patch: '+  "dependencies": {\n+    "new-pkg": "^1.0.0"\n+  }',
+				},
 			],
 		});
 		const results = evaluateContracts(
@@ -132,7 +138,27 @@ describe("evaluateContracts — no_new_dependencies", () => {
 		expect(results[0].detail).toContain("package.json");
 	});
 
-	it("fails when pnpm-lock.yaml is added", () => {
+	it("passes when package.json scripts section is modified (no deps)", () => {
+		const diff = makeDiff({
+			files: [
+				{
+					filename: "package.json",
+					status: "modified",
+					additions: 1,
+					deletions: 1,
+					patch: '+  "scripts": { "test": "vitest" }',
+				},
+			],
+		});
+		const results = evaluateContracts(
+			[makeContract({ type: "no_new_dependencies" })],
+			diff,
+			makeSpec(),
+		);
+		expect(results[0].passed).toBe(true);
+	});
+
+	it("fails when lock file is added", () => {
 		const diff = makeDiff({
 			files: [
 				{ filename: "pnpm-lock.yaml", status: "added", additions: 100, deletions: 0 },
@@ -386,7 +412,7 @@ describe("evaluateContracts — multiple", () => {
 	it("mixes pass and fail results", () => {
 		const diff = makeDiff({
 			files: [
-				{ filename: "package.json", status: "modified", additions: 1, deletions: 0 },
+				{ filename: "pnpm-lock.yaml", status: "modified", additions: 50, deletions: 10 },
 			],
 		});
 		const contracts = [
@@ -394,7 +420,7 @@ describe("evaluateContracts — multiple", () => {
 			makeContract({ id: "c2", type: "max_files_changed", params: { max: 10 } }),
 		];
 		const results = evaluateContracts(contracts, diff, makeSpec());
-		expect(results[0].passed).toBe(false); // dependency changed
+		expect(results[0].passed).toBe(false); // lock file changed
 		expect(results[1].passed).toBe(true); // 1 file < 10
 	});
 });
