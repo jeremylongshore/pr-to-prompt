@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-03-17
+
+### Added
+- **Intent DAG**: Graph-based intent tracking with spec fragments, decision taxonomy, and propagation engine
+- `graph` subcommand — query ancestors/descendants, compute impact, view graph stats
+- `contract` subcommand — declarative contract verification (no_new_dependencies, no_file_outside_scope, max_files_changed, no_pattern_in_diff, require_pattern_in_diff, no_new_exports, custom_command)
+- `intent approve` / `intent lock` — approval workflow (draft → approved → locked)
+- `intent gate` — evaluate gate policy (min_confidence, require_no_stale, require_no_must_ask)
+- Graph materialization — gate and contract results become audit trail nodes
+- Feedback ingestion — learn from reviews to improve future classifications
+- 364 tests (84 new tests for Intent DAG)
+
+### Changed
+- Contract evaluator: smarter `no_new_dependencies` detection (lock files vs manifest files)
+- Protocol envelope: `gate_failed` status with exit code 4
+- `check` subcommand: integrated contract evaluation and gate checks
+
 ## [0.6.0] - 2026-03-17
 
 ### Changed

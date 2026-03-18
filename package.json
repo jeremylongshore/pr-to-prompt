@@ -1,6 +1,6 @@
 {
   "name": "pr-to-spec",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Convert code changes into structured, agent-consumable spec artifacts",
   "type": "module",
   "main": "dist/index.js",
