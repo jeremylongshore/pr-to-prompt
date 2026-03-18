@@ -1,5 +1,6 @@
 import type { DiffSource } from "../sources/types.js";
 import type { Intent } from "../intent/schema.js";
+import { matchesGlob } from "../drift/detector.js";
 
 /**
  * Decision taxonomy based on 2x2 matrix:
@@ -27,6 +28,10 @@ export interface Decision {
  * | high           | low           | confirm_upfront |
  * | low            | high          | ask_adhoc       |
  * | high           | high          | assume_safe     |
+ *
+ * @param predictability - How reliably the AI can guess the user's intent.
+ * @param reversibility - How easily the decision can be undone.
+ * @returns The appropriate decision action.
  */
 export function classifyDecision(
 	predictability: "low" | "high",
@@ -169,7 +174,7 @@ export function analyzeAssumptions(diff: DiffSource, intent: Intent): Decision[]
 	// 9. Scope drift from intent — if intent has expected_scope, check if files are outside
 	if (intent.expected_scope.length > 0) {
 		const outOfScope = diff.files.filter(
-			(f) => !intent.expected_scope.some((g) => matchesSimpleGlob(f.filename, g)),
+			(f) => !intent.expected_scope.some((g) => matchesGlob(f.filename, g)),
 		);
 		if (outOfScope.length > 0) {
 			decisions.push({
@@ -190,7 +195,7 @@ export function analyzeAssumptions(diff: DiffSource, intent: Intent): Decision[]
 	// 10. Forbidden scope violation — always must_ask
 	if (intent.forbidden_scope.length > 0) {
 		const forbidden = diff.files.filter((f) =>
-			intent.forbidden_scope.some((g) => matchesSimpleGlob(f.filename, g)),
+			intent.forbidden_scope.some((g) => matchesGlob(f.filename, g)),
 		);
 		if (forbidden.length > 0) {
 			decisions.push({
@@ -206,14 +211,4 @@ export function analyzeAssumptions(diff: DiffSource, intent: Intent): Decision[]
 	}
 
 	return decisions;
-}
-
-/** Simple glob matcher — supports * and ** patterns */
-function matchesSimpleGlob(filename: string, pattern: string): boolean {
-	const escaped = pattern
-		.replace(/[.+^${}()|[\]\\]/g, "\\$&")
-		.replace(/\*\*/g, "§DOUBLE§")
-		.replace(/\*/g, "[^/]*")
-		.replace(/§DOUBLE§/g, ".*");
-	return new RegExp(`^${escaped}$`).test(filename);
 }

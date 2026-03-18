@@ -4,7 +4,7 @@ import { analyzeAssumptions } from "../decisions/classifier.js";
 import type { DriftSignal, DriftSignalType } from "./signals.js";
 
 /** Simple glob matcher — supports * and ** patterns */
-function matchesGlob(filename: string, pattern: string): boolean {
+export function matchesGlob(filename: string, pattern: string): boolean {
 	// Convert glob to regex
 	const escaped = pattern
 		.replace(/[.+^${}()|[\]\\]/g, "\\$&")
