@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
-import { createClient, fetchPR } from "../src/core/github/client.js";
+import { type createClient, fetchPR } from "../src/core/github/client.js";
 
 // ---------------------------------------------------------------------------
 // Mock Octokit to simulate API error responses
 // ---------------------------------------------------------------------------
 
 function makeOctokitError(status: number, headers: Record<string, string> = {}): never {
-	const err = new Error(`HttpError`) as Error & {
+	const err = new Error("HttpError") as Error & {
 		status: number;
 		response: { headers: Record<string, string> };
 	};
@@ -33,16 +33,12 @@ function mockOctokit(status: number, headers: Record<string, string> = {}) {
 describe("GitHub API error handling", () => {
 	it("maps 401 to invalid token message", async () => {
 		const octokit = mockOctokit(401);
-		await expect(fetchPR(octokit, "owner", "repo", 42)).rejects.toThrow(
-			/invalid or expired/i,
-		);
+		await expect(fetchPR(octokit, "owner", "repo", 42)).rejects.toThrow(/invalid or expired/i);
 	});
 
 	it("maps 403 to access denied message", async () => {
 		const octokit = mockOctokit(403);
-		await expect(fetchPR(octokit, "owner", "repo", 42)).rejects.toThrow(
-			/access denied/i,
-		);
+		await expect(fetchPR(octokit, "owner", "repo", 42)).rejects.toThrow(/access denied/i);
 	});
 
 	it("maps 403 with exhausted rate limit to rate limit message", async () => {
@@ -51,9 +47,7 @@ describe("GitHub API error handling", () => {
 			"x-ratelimit-remaining": "0",
 			"x-ratelimit-reset": resetTime,
 		});
-		await expect(fetchPR(octokit, "owner", "repo", 42)).rejects.toThrow(
-			/rate limit exceeded/i,
-		);
+		await expect(fetchPR(octokit, "owner", "repo", 42)).rejects.toThrow(/rate limit exceeded/i);
 	});
 
 	it("maps 404 to PR not found message with context", async () => {
@@ -65,9 +59,7 @@ describe("GitHub API error handling", () => {
 
 	it("maps 422 to invalid request message", async () => {
 		const octokit = mockOctokit(422);
-		await expect(fetchPR(octokit, "owner", "repo", 42)).rejects.toThrow(
-			/invalid request/i,
-		);
+		await expect(fetchPR(octokit, "owner", "repo", 42)).rejects.toThrow(/invalid request/i);
 	});
 
 	it("passes through generic errors", async () => {
@@ -135,9 +127,7 @@ describe("Large PR file truncation", () => {
 
 		await fetchPR(octokit, "owner", "repo", 1);
 
-		expect(warnSpy).toHaveBeenCalledWith(
-			expect.stringContaining("300+ files"),
-		);
+		expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("300+ files"));
 		warnSpy.mockRestore();
 	});
 
