@@ -118,9 +118,11 @@ async function runScan(opts: ScanOptions): Promise<number> {
 }
 
 function extractField(obj: Record<string, unknown>, path: string): unknown {
+	const BLOCKED_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 	const parts = path.split(".");
 	let current: unknown = obj;
 	for (const part of parts) {
+		if (BLOCKED_KEYS.has(part)) return undefined;
 		if (current === null || current === undefined || typeof current !== "object") return undefined;
 		current = (current as Record<string, unknown>)[part];
 	}

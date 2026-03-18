@@ -53,14 +53,30 @@ export async function fetchPR(
 	repo: string,
 	prNumber: number,
 ): Promise<PRData> {
-	const [prResponse, filesResponse, commentsResponse, reviewsResponse] = await Promise.all([
-		octokit.pulls.get({ owner, repo, pull_number: prNumber }),
-		octokit.pulls.listFiles({ owner, repo, pull_number: prNumber, per_page: 300 }),
-		octokit.pulls.listReviewComments({ owner, repo, pull_number: prNumber, per_page: 100 }),
-		octokit.pulls.listReviews({ owner, repo, pull_number: prNumber, per_page: 50 }),
-	]);
+	let prResponse: Awaited<ReturnType<typeof octokit.pulls.get>>;
+	let filesResponse: Awaited<ReturnType<typeof octokit.pulls.listFiles>>;
+	let commentsResponse: Awaited<ReturnType<typeof octokit.pulls.listReviewComments>>;
+	let reviewsResponse: Awaited<ReturnType<typeof octokit.pulls.listReviews>>;
+
+	try {
+		[prResponse, filesResponse, commentsResponse, reviewsResponse] = await Promise.all([
+			octokit.pulls.get({ owner, repo, pull_number: prNumber }),
+			octokit.pulls.listFiles({ owner, repo, pull_number: prNumber, per_page: 300 }),
+			octokit.pulls.listReviewComments({ owner, repo, pull_number: prNumber, per_page: 100 }),
+			octokit.pulls.listReviews({ owner, repo, pull_number: prNumber, per_page: 50 }),
+		]);
+	} catch (err: unknown) {
+		throw mapGitHubError(err, owner, repo, prNumber);
+	}
 
 	const pr = prResponse.data;
+
+	// Warn if file list may be truncated
+	if (filesResponse.data.length >= 300) {
+		console.warn(
+			`Warning: PR #${prNumber} has 300+ files; results may be incomplete. GitHub API returns at most 300 files per page.`,
+		);
+	}
 
 	// Extract linked issues from PR body
 	const linkedIssues = extractLinkedIssues(pr.body ?? "", owner, repo);
@@ -103,6 +119,44 @@ export async function fetchPR(
 				body: r.body ?? "",
 			})),
 	};
+}
+
+function mapGitHubError(err: unknown, owner: string, repo: string, prNumber: number): Error {
+	if (err && typeof err === "object" && "status" in err) {
+		const status = (err as { status: number }).status;
+		const headers = (err as { response?: { headers?: Record<string, string> } }).response
+			?.headers;
+
+		switch (status) {
+			case 401:
+				return new Error(
+					"GitHub token is invalid or expired. Check your GITHUB_TOKEN or --token value.",
+				);
+			case 403: {
+				const remaining = headers?.["x-ratelimit-remaining"];
+				if (remaining === "0") {
+					const resetAt = headers?.["x-ratelimit-reset"];
+					const resetTime = resetAt ? new Date(Number(resetAt) * 1000).toISOString() : "soon";
+					return new Error(
+						`GitHub API rate limit exceeded. Resets at ${resetTime}. Use a token with higher limits.`,
+					);
+				}
+				return new Error(
+					`Access denied to ${owner}/${repo}. Check that your token has the required permissions.`,
+				);
+			}
+			case 404:
+				return new Error(
+					`PR #${prNumber} not found in ${owner}/${repo}. Check the repo name and PR number, or verify you have access.`,
+				);
+			case 422:
+				return new Error(
+					`Invalid request for PR #${prNumber} in ${owner}/${repo}. Check that the repo format is correct (owner/name) and the PR number is valid.`,
+				);
+		}
+	}
+	if (err instanceof Error) return err;
+	return new Error(String(err));
 }
 
 function extractLinkedIssues(body: string, owner: string, repo: string): string[] {

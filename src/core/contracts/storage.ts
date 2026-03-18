@@ -4,7 +4,7 @@ import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 import { type Contract, ContractSchema } from "./schema.js";
 
-const CONTRACTS_DIR = ".pr-to-spec";
+const CONTRACTS_DIR = process.env.PR_TO_SPEC_DIR ?? ".pr-to-spec";
 const CONTRACTS_FILE = "contracts.yaml";
 
 export function getContractsPath(cwd: string = process.cwd()): string {

@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { type Intent, IntentSchema } from "./schema.js";
 
-const INTENT_DIR = ".pr-to-spec";
+const INTENT_DIR = process.env.PR_TO_SPEC_DIR ?? ".pr-to-spec";
 const INTENT_FILE = "intent.yaml";
 
 export function getIntentPath(cwd: string = process.cwd()): string {

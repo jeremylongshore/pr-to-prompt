@@ -345,32 +345,25 @@ describe("evaluateContracts — no_new_exports", () => {
 // evaluateContracts — custom_command
 // ---------------------------------------------------------------------------
 
-describe("evaluateContracts — custom_command", () => {
-	it("passes when command exits 0", () => {
+describe("evaluateContracts — custom_command (deprecated)", () => {
+	it("always fails with security deprecation message", () => {
 		const results = evaluateContracts(
 			[makeContract({ type: "custom_command", params: { cmd: "true" } })],
 			makeDiff(),
 			makeSpec(),
 		);
-		expect(results[0].passed).toBe(true);
-	});
-
-	it("fails when command exits non-zero", () => {
-		const results = evaluateContracts(
-			[makeContract({ type: "custom_command", params: { cmd: "false" } })],
-			makeDiff(),
-			makeSpec(),
-		);
 		expect(results[0].passed).toBe(false);
+		expect(results[0].detail).toContain("removed for security reasons");
 	});
 
-	it("fails when no command specified", () => {
+	it("fails even with no command specified", () => {
 		const results = evaluateContracts(
 			[makeContract({ type: "custom_command", params: {} })],
 			makeDiff(),
 			makeSpec(),
 		);
 		expect(results[0].passed).toBe(false);
+		expect(results[0].detail).toContain("removed for security reasons");
 	});
 });
 
