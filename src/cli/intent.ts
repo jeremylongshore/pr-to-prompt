@@ -1,10 +1,10 @@
 import { Command } from "commander";
-import { type Intent, IntentSchema } from "../core/intent/schema.js";
-import { readIntent, writeIntent } from "../core/intent/storage.js";
-import { analyzeAssumptions, type Decision } from "../core/decisions/classifier.js";
-import { evaluateGate, IntentGatePolicySchema } from "../core/gate/policy.js";
+import { type Decision, analyzeAssumptions } from "../core/decisions/classifier.js";
+import { IntentGatePolicySchema, evaluateGate } from "../core/gate/policy.js";
 import { readPolicy } from "../core/gate/storage.js";
 import { readGraph } from "../core/graph/storage.js";
+import { type Intent, IntentSchema } from "../core/intent/schema.js";
+import { readIntent, writeIntent } from "../core/intent/storage.js";
 import { buildLocalDiffSource } from "../core/sources/local.js";
 
 export const intentCommand = new Command("intent").description(
@@ -69,10 +69,7 @@ intentCommand
 		}
 	});
 
-function logAnalyze(
-	opts: { quiet: boolean; json: boolean },
-	...args: unknown[]
-): void {
+function logAnalyze(opts: { quiet: boolean; json: boolean }, ...args: unknown[]): void {
 	if (!opts.quiet && !opts.json) console.log(...args);
 }
 
@@ -117,9 +114,7 @@ async function runIntentAnalyze(opts: {
 	if (!intent) {
 		logAnalyze(opts, 'No intent declared. Run: pr-to-spec intent set --goal "..."');
 		if (opts.json) {
-			process.stdout.write(
-				JSON.stringify({ decisions: [], error: "no_intent" }, null, 2) + "\n",
-			);
+			process.stdout.write(`${JSON.stringify({ decisions: [], error: "no_intent" }, null, 2)}\n`);
 		}
 		return 1;
 	}
@@ -132,7 +127,7 @@ async function runIntentAnalyze(opts: {
 	}
 
 	if (opts.json) {
-		process.stdout.write(JSON.stringify({ decisions }, null, 2) + "\n");
+		process.stdout.write(`${JSON.stringify({ decisions }, null, 2)}\n`);
 	} else {
 		if (decisions.length === 0) {
 			console.log("No assumptions to validate. All clear.");
@@ -144,12 +139,7 @@ async function runIntentAnalyze(opts: {
 				grouped.set(d.action, list);
 			}
 
-			const order: string[] = [
-				"must_ask",
-				"confirm_upfront",
-				"ask_adhoc",
-				"assume_safe",
-			];
+			const order: string[] = ["must_ask", "confirm_upfront", "ask_adhoc", "assume_safe"];
 			const labels: Record<string, string> = {
 				must_ask: "MUST ASK (low predictability, low reversibility)",
 				confirm_upfront: "CONFIRM UPFRONT (high predictability, low reversibility)",
@@ -187,9 +177,7 @@ intentCommand
 		const intent = readIntent();
 		if (!intent) {
 			if (opts.json) {
-				process.stdout.write(
-					`${JSON.stringify({ error: "no_intent" })}\n`,
-				);
+				process.stdout.write(`${JSON.stringify({ error: "no_intent" })}\n`);
 			} else {
 				console.error('No intent set. Use: pr-to-spec intent set --goal "..."');
 			}
@@ -198,9 +186,7 @@ intentCommand
 
 		if (intent.status === "locked") {
 			if (opts.json) {
-				process.stdout.write(
-					`${JSON.stringify({ error: "intent_locked" })}\n`,
-				);
+				process.stdout.write(`${JSON.stringify({ error: "intent_locked" })}\n`);
 			} else {
 				console.error("Intent is locked and cannot be modified.");
 			}
@@ -233,9 +219,7 @@ intentCommand
 		const intent = readIntent();
 		if (!intent) {
 			if (opts.json) {
-				process.stdout.write(
-					`${JSON.stringify({ error: "no_intent" })}\n`,
-				);
+				process.stdout.write(`${JSON.stringify({ error: "no_intent" })}\n`);
 			} else {
 				console.error('No intent set. Use: pr-to-spec intent set --goal "..."');
 			}
@@ -295,9 +279,7 @@ async function runGate(opts: {
 	const intent = readIntent();
 	if (!intent) {
 		if (opts.json) {
-			process.stdout.write(
-				`${JSON.stringify({ error: "no_intent" })}\n`,
-			);
+			process.stdout.write(`${JSON.stringify({ error: "no_intent" })}\n`);
 		} else {
 			console.error('No intent set. Use: pr-to-spec intent set --goal "..."');
 		}

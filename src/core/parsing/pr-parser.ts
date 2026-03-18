@@ -1,11 +1,11 @@
 import type { PRData } from "../github/client.js";
 import { classifyRisks } from "../risk/classifier.js";
 import {
-	computeContentHash,
-	computeFragmentId,
 	type FileChange,
 	type PromptSpec,
 	type SpecFragment,
+	computeContentHash,
+	computeFragmentId,
 } from "../schema/prompt-spec.js";
 import { githubPRtoDiffSource } from "../sources/github.js";
 import type { DiffSource } from "../sources/types.js";

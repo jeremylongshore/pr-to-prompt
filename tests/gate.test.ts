@@ -2,23 +2,16 @@ import { mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import {
+	type IntentGatePolicy,
+	IntentGatePolicySchema,
+	evaluateGate,
+} from "../src/core/gate/policy.js";
+import { getPolicyPath, readPolicy, writePolicy } from "../src/core/gate/storage.js";
 import type { IntentGraph } from "../src/core/graph/edge.js";
 import type { IntentNode } from "../src/core/graph/node.js";
-import {
-	createEmptyGraph,
-	upsertNode,
-} from "../src/core/graph/propagation.js";
-import {
-	evaluateGate,
-	IntentGatePolicySchema,
-	type IntentGatePolicy,
-} from "../src/core/gate/policy.js";
-import {
-	getPolicyPath,
-	readPolicy,
-	writePolicy,
-} from "../src/core/gate/storage.js";
-import { IntentSchema, type Intent } from "../src/core/intent/schema.js";
+import { createEmptyGraph, upsertNode } from "../src/core/graph/propagation.js";
+import { type Intent, IntentSchema } from "../src/core/intent/schema.js";
 import { buildEnvelope } from "../src/core/protocol/envelope.js";
 import type { DiffSource } from "../src/core/sources/types.js";
 
@@ -34,10 +27,7 @@ function makeIntent(overrides: Partial<Intent> = {}): Intent {
 	});
 }
 
-function makeNode(
-	id: string,
-	overrides: Partial<IntentNode> = {},
-): IntentNode {
+function makeNode(id: string, overrides: Partial<IntentNode> = {}): IntentNode {
 	return {
 		node_id: id,
 		node_type: "project_intent",
@@ -166,9 +156,7 @@ describe("evaluateGate", () => {
 		const graph = createEmptyGraph();
 		// Diff touches forbidden scope → triggers must_ask decision
 		const diff = makeDiff({
-			files: [
-				{ filename: "src/db/migration.sql", status: "added", additions: 10, deletions: 0 },
-			],
+			files: [{ filename: "src/db/migration.sql", status: "added", additions: 10, deletions: 0 }],
 		});
 		const policy = IntentGatePolicySchema.parse({ require_no_must_ask: true });
 		const result = evaluateGate(graph, intent, diff, policy);

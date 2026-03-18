@@ -1,6 +1,6 @@
-import type { DiffSource } from "../sources/types.js";
-import type { Intent } from "../intent/schema.js";
 import { matchesGlob } from "../drift/detector.js";
+import type { Intent } from "../intent/schema.js";
+import type { DiffSource } from "../sources/types.js";
 
 /**
  * Decision taxonomy based on 2x2 matrix:
@@ -100,9 +100,7 @@ export function analyzeAssumptions(diff: DiffSource, intent: Intent): Decision[]
 
 	// 4. Infrastructure/deploy changes — high predictability, low reversibility → confirm_upfront
 	if (
-		diff.files.some((f) =>
-			/\b(docker|terraform|k8s|deploy|infra|workflow)\b/i.test(f.filename),
-		)
+		diff.files.some((f) => /\b(docker|terraform|k8s|deploy|infra|workflow)\b/i.test(f.filename))
 	) {
 		decisions.push({
 			id: nextId(),

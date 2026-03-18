@@ -1,5 +1,11 @@
 export { enhanceSpec, type AIEnhanceOptions } from "./core/ai/enhancer.js";
-export { diffSpecs, diffFragments, type SpecDiff, type SectionDiff, type FragmentDiff } from "./core/diff/spec-diff.js";
+export {
+	diffSpecs,
+	diffFragments,
+	type SpecDiff,
+	type SectionDiff,
+	type FragmentDiff,
+} from "./core/diff/spec-diff.js";
 export {
 	PromptSpecSchema,
 	SpecFragmentSchema,
@@ -11,7 +17,12 @@ export {
 	type SpecFragment,
 } from "./core/schema/prompt-spec.js";
 export { createClient, fetchPR, type PRData, type PRFile } from "./core/github/client.js";
-export { generateSpec, generateSpecFromPR, compactSpec, decomposeIntoFragments } from "./core/parsing/pr-parser.js";
+export {
+	generateSpec,
+	generateSpecFromPR,
+	compactSpec,
+	decomposeIntoFragments,
+} from "./core/parsing/pr-parser.js";
 export { parseReviews, type ReviewSummary } from "./core/parsing/review-parser.js";
 export { analyzeSemanticDiff, type SemanticChange } from "./core/parsing/semantic-diff.js";
 export { detectMonorepo, type MonorepoInfo } from "./core/parsing/monorepo-detector.js";
@@ -33,7 +44,11 @@ export {
 } from "./core/intent/schema.js";
 export { readIntent, writeIntent } from "./core/intent/storage.js";
 export { mergeIntents, flattenToIntent, singleLayerIntent } from "./core/intent/composition.js";
-export { detectDrift, detectDriftWithSpec, detectAssumptionViolations } from "./core/drift/detector.js";
+export {
+	detectDrift,
+	detectDriftWithSpec,
+	detectAssumptionViolations,
+} from "./core/drift/detector.js";
 export type { DriftSignal, DriftSignalType } from "./core/drift/signals.js";
 export {
 	classifyDecision,

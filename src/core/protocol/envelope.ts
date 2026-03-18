@@ -3,12 +3,7 @@ import type { GateResult } from "../gate/policy.js";
 import type { Intent } from "../intent/schema.js";
 import type { PromptSpec } from "../schema/prompt-spec.js";
 
-export type ProtocolStatus =
-	| "clean"
-	| "high_risk"
-	| "drift_detected"
-	| "gate_failed"
-	| "error";
+export type ProtocolStatus = "clean" | "high_risk" | "drift_detected" | "gate_failed" | "error";
 
 export interface AgentProtocolEnvelope {
 	version: 1;

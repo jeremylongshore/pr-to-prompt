@@ -1,7 +1,7 @@
-import { computeContentHash, computeFragmentId } from "../schema/prompt-spec.js";
-import type { IntentNode } from "../graph/node.js";
 import type { IntentGraph } from "../graph/edge.js";
-import { upsertNode, addEdge, propagateInvalidation } from "../graph/propagation.js";
+import type { IntentNode } from "../graph/node.js";
+import { addEdge, propagateInvalidation, upsertNode } from "../graph/propagation.js";
+import { computeContentHash, computeFragmentId } from "../schema/prompt-spec.js";
 
 export interface ReviewFeedback {
 	reviewer: string;

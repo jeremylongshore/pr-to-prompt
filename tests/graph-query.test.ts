@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { IntentGraph } from "../src/core/graph/edge.js";
 import type { IntentNode } from "../src/core/graph/node.js";
-import { buildChildMap, createEmptyGraph, upsertNode, addEdge } from "../src/core/graph/propagation.js";
+import {
+	addEdge,
+	buildChildMap,
+	createEmptyGraph,
+	upsertNode,
+} from "../src/core/graph/propagation.js";
 import {
 	computeAggregateConfidence,
 	computeGraphStats,
@@ -197,7 +202,10 @@ describe("computeAggregateConfidence", () => {
 	it("considers self confidence in the minimum", () => {
 		const graph = createEmptyGraph();
 		upsertNode(graph, makeNode("parent", "project_intent", { confidence: 0.9 }));
-		upsertNode(graph, makeNode("child", "spec_fragment", { parent_ids: ["parent"], confidence: 0.3 }));
+		upsertNode(
+			graph,
+			makeNode("child", "spec_fragment", { parent_ids: ["parent"], confidence: 0.3 }),
+		);
 		expect(computeAggregateConfidence(graph, "child")).toBe(0.3);
 	});
 
@@ -217,9 +225,7 @@ describe("findImpactedNodes", () => {
 		const report = findImpactedNodes(graph, ["A"]);
 		expect(report.total_impacted).toBe(4);
 		// B and C are distance 1, D is distance 2 (via B or C), E is distance 2 (via C)
-		const byId = Object.fromEntries(
-			report.impacted_nodes.map((n) => [n.node_id, n]),
-		);
+		const byId = Object.fromEntries(report.impacted_nodes.map((n) => [n.node_id, n]));
 		expect(byId.B.distance).toBe(1);
 		expect(byId.C.distance).toBe(1);
 		expect(byId.D.distance).toBe(2);
@@ -279,7 +285,7 @@ describe("computeGraphStats", () => {
 
 	it("counts stale nodes", () => {
 		const graph = buildTestGraph();
-		const node = graph.nodes.find((n) => n.node_id === "B")!;
+		const node = graph.nodes.find((n) => n.node_id === "B") as (typeof graph.nodes)[number];
 		node.invalidated_at = "2026-03-17T00:00:00.000Z";
 		const stats = computeGraphStats(graph);
 		expect(stats.stale_nodes).toBe(1);

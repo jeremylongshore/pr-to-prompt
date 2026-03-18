@@ -1,12 +1,12 @@
 import { Command } from "commander";
-import { readGraph, writeGraph } from "../core/graph/storage.js";
-import { getStaleNodes } from "../core/graph/propagation.js";
 import {
+	type CIFeedback,
+	type ReviewFeedback,
 	ingestFeedback,
 	summarizeFeedback,
-	type ReviewFeedback,
-	type CIFeedback,
 } from "../core/feedback/ingester.js";
+import { getStaleNodes } from "../core/graph/propagation.js";
+import { readGraph, writeGraph } from "../core/graph/storage.js";
 
 export const feedbackCommand = new Command("feedback").description(
 	"Ingest review/CI feedback and update the intent graph",
@@ -38,7 +38,7 @@ feedbackCommand
 		if (opts.json) {
 			const summary = summarizeFeedback(graph);
 			process.stdout.write(
-				JSON.stringify(
+				`${JSON.stringify(
 					{
 						created_feedback_ids: createdIds,
 						...summary,
@@ -46,7 +46,7 @@ feedbackCommand
 					},
 					null,
 					2,
-				) + "\n",
+				)}\n`,
 			);
 		} else {
 			console.log(`Feedback ingested from ${review.reviewer} (${review.status})`);
@@ -83,7 +83,7 @@ feedbackCommand
 		if (opts.json) {
 			const summary = summarizeFeedback(graph);
 			process.stdout.write(
-				JSON.stringify(
+				`${JSON.stringify(
 					{
 						created_feedback_ids: createdIds,
 						...summary,
@@ -91,7 +91,7 @@ feedbackCommand
 					},
 					null,
 					2,
-				) + "\n",
+				)}\n`,
 			);
 		} else {
 			console.log(`CI feedback ingested: ${ci.pipeline} (${ci.status})`);
@@ -113,7 +113,7 @@ feedbackCommand
 
 		if (opts.json) {
 			process.stdout.write(
-				JSON.stringify(
+				`${JSON.stringify(
 					{
 						...summary,
 						stale_nodes: stale.map((n) => ({
@@ -125,7 +125,7 @@ feedbackCommand
 					},
 					null,
 					2,
-				) + "\n",
+				)}\n`,
 			);
 		} else {
 			console.log(`Graph: ${summary.total_nodes} nodes, ${summary.feedback_nodes} feedback`);

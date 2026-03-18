@@ -3,15 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { evaluateContracts } from "../src/core/contracts/evaluator.js";
-import {
-	ContractSchema,
-	type Contract,
-} from "../src/core/contracts/schema.js";
-import {
-	getContractsPath,
-	readContracts,
-	writeContracts,
-} from "../src/core/contracts/storage.js";
+import { type Contract, ContractSchema } from "../src/core/contracts/schema.js";
+import { getContractsPath, readContracts, writeContracts } from "../src/core/contracts/storage.js";
 import type { PromptSpec } from "../src/core/schema/prompt-spec.js";
 import type { DiffSource } from "../src/core/sources/types.js";
 
@@ -160,9 +153,7 @@ describe("evaluateContracts — no_new_dependencies", () => {
 
 	it("fails when lock file is added", () => {
 		const diff = makeDiff({
-			files: [
-				{ filename: "pnpm-lock.yaml", status: "added", additions: 100, deletions: 0 },
-			],
+			files: [{ filename: "pnpm-lock.yaml", status: "added", additions: 100, deletions: 0 }],
 		});
 		const results = evaluateContracts(
 			[makeContract({ type: "no_new_dependencies" })],
@@ -189,9 +180,7 @@ describe("evaluateContracts — no_file_outside_scope", () => {
 
 	it("fails when file outside scope", () => {
 		const diff = makeDiff({
-			files: [
-				{ filename: "docs/readme.md", status: "added", additions: 10, deletions: 0 },
-			],
+			files: [{ filename: "docs/readme.md", status: "added", additions: 10, deletions: 0 }],
 		});
 		const results = evaluateContracts(
 			[makeContract({ type: "no_file_outside_scope", params: { scope: ["src/**"] } })],
@@ -331,11 +320,7 @@ describe("evaluateContracts — no_new_exports", () => {
 				},
 			],
 		});
-		const results = evaluateContracts(
-			[makeContract({ type: "no_new_exports" })],
-			diff,
-			makeSpec(),
-		);
+		const results = evaluateContracts([makeContract({ type: "no_new_exports" })], diff, makeSpec());
 		expect(results[0].passed).toBe(false);
 	});
 
@@ -351,11 +336,7 @@ describe("evaluateContracts — no_new_exports", () => {
 				},
 			],
 		});
-		const results = evaluateContracts(
-			[makeContract({ type: "no_new_exports" })],
-			diff,
-			makeSpec(),
-		);
+		const results = evaluateContracts([makeContract({ type: "no_new_exports" })], diff, makeSpec());
 		expect(results[0].passed).toBe(true);
 	});
 });
@@ -411,9 +392,7 @@ describe("evaluateContracts — multiple", () => {
 
 	it("mixes pass and fail results", () => {
 		const diff = makeDiff({
-			files: [
-				{ filename: "pnpm-lock.yaml", status: "modified", additions: 50, deletions: 10 },
-			],
+			files: [{ filename: "pnpm-lock.yaml", status: "modified", additions: 50, deletions: 10 }],
 		});
 		const contracts = [
 			makeContract({ id: "c1", type: "no_new_dependencies" }),

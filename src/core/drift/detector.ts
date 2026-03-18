@@ -1,6 +1,6 @@
+import { analyzeAssumptions } from "../decisions/classifier.js";
 import type { Intent } from "../intent/schema.js";
 import type { DiffSource } from "../sources/types.js";
-import { analyzeAssumptions } from "../decisions/classifier.js";
 import type { DriftSignal, DriftSignalType } from "./signals.js";
 
 /** Simple glob matcher — supports * and ** patterns */
@@ -70,10 +70,7 @@ export function detectDrift(diff: DiffSource, intent: Intent): DriftSignal[] {
  * Detect assumption violations — decisions that were classified as must_ask
  * but no confirmation was provided.
  */
-export function detectAssumptionViolations(
-	diff: DiffSource,
-	intent: Intent,
-): DriftSignal[] {
+export function detectAssumptionViolations(diff: DiffSource, intent: Intent): DriftSignal[] {
 	const decisions = analyzeAssumptions(diff, intent);
 	const mustAsk = decisions.filter((d) => d.action === "must_ask");
 
@@ -81,9 +78,7 @@ export function detectAssumptionViolations(
 		type: "assumption_violation" as DriftSignalType,
 		description: d.question,
 		severity: "high" as const,
-		details: d.context
-			? [d.context, `category: ${d.category}`]
-			: [`category: ${d.category}`],
+		details: d.context ? [d.context, `category: ${d.category}`] : [`category: ${d.category}`],
 	}));
 }
 

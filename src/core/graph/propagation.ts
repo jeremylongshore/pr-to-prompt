@@ -1,5 +1,5 @@
-import type { IntentNode } from "./node.js";
 import type { IntentEdge, IntentGraph } from "./edge.js";
+import type { IntentNode } from "./node.js";
 
 /**
  * Build a parent → children adjacency map from parent_ids and derives_from edges.
@@ -34,10 +34,7 @@ export function buildChildMap(graph: IntentGraph): Map<string, string[]> {
  *
  * Returns the set of invalidated node IDs.
  */
-export function propagateInvalidation(
-	graph: IntentGraph,
-	changedNodeId: string,
-): Set<string> {
+export function propagateInvalidation(graph: IntentGraph, changedNodeId: string): Set<string> {
 	const invalidated = new Set<string>();
 	const now = new Date().toISOString();
 
@@ -48,7 +45,7 @@ export function propagateInvalidation(
 	invalidated.add(changedNodeId);
 
 	while (queue.length > 0) {
-		const current = queue.shift()!;
+		const current = queue.shift() as string;
 		const children = childrenOf.get(current) ?? [];
 		for (const childId of children) {
 			if (!invalidated.has(childId)) {

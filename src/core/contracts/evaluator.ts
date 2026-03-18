@@ -51,7 +51,9 @@ const checkers: Record<ContractType, Checker> = {
 				DEPENDENCY_MANIFEST_FILES.has(f.filename.split("/").pop() ?? "") &&
 				(f.status === "added" || f.status === "modified") &&
 				f.patch &&
-				/^\+.*"(dependencies|devDependencies|peerDependencies|optionalDependencies)"/m.test(f.patch),
+				/^\+.*"(dependencies|devDependencies|peerDependencies|optionalDependencies)"/m.test(
+					f.patch,
+				),
 		);
 		if (manifestFiles.length > 0) {
 			return {

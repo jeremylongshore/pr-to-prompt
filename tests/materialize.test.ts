@@ -1,12 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { createEmptyGraph } from "../src/core/graph/propagation.js";
-import {
-	materializeContractResult,
-	materializeGateResult,
-} from "../src/core/graph/materialize.js";
-import { getNodesByType } from "../src/core/graph/query.js";
-import type { GateResult } from "../src/core/gate/policy.js";
 import type { ContractResult } from "../src/core/contracts/schema.js";
+import type { GateResult } from "../src/core/gate/policy.js";
+import { materializeContractResult, materializeGateResult } from "../src/core/graph/materialize.js";
+import { createEmptyGraph } from "../src/core/graph/propagation.js";
+import { getNodesByType } from "../src/core/graph/query.js";
 
 // ---------------------------------------------------------------------------
 // materializeGateResult
@@ -21,9 +18,7 @@ describe("materializeGateResult", () => {
 				{ name: "approval", passed: true, detail: "Intent approved by alice" },
 				{ name: "confidence", passed: false, detail: "Min confidence 0.5 < 0.7" },
 			],
-			blocking_checks: [
-				{ name: "confidence", passed: false, detail: "Min confidence 0.5 < 0.7" },
-			],
+			blocking_checks: [{ name: "confidence", passed: false, detail: "Min confidence 0.5 < 0.7" }],
 		};
 
 		const ids = materializeGateResult(graph, gateResult);
@@ -41,9 +36,7 @@ describe("materializeGateResult", () => {
 				{ name: "approval", passed: true, detail: "ok" },
 				{ name: "no_stale", passed: false, detail: "2 stale nodes" },
 			],
-			blocking_checks: [
-				{ name: "no_stale", passed: false, detail: "2 stale nodes" },
-			],
+			blocking_checks: [{ name: "no_stale", passed: false, detail: "2 stale nodes" }],
 		};
 
 		materializeGateResult(graph, gateResult);

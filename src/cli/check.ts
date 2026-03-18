@@ -4,12 +4,9 @@ import type { ContractResult } from "../core/contracts/schema.js";
 import { readContracts } from "../core/contracts/storage.js";
 import { detectDriftWithSpec } from "../core/drift/detector.js";
 import type { DriftSignal } from "../core/drift/signals.js";
-import { evaluateGate, type GateResult, IntentGatePolicySchema } from "../core/gate/policy.js";
+import { type GateResult, IntentGatePolicySchema, evaluateGate } from "../core/gate/policy.js";
 import { readPolicy } from "../core/gate/storage.js";
-import {
-	materializeContractResult,
-	materializeGateResult,
-} from "../core/graph/materialize.js";
+import { materializeContractResult, materializeGateResult } from "../core/graph/materialize.js";
 import { readGraph, writeGraph } from "../core/graph/storage.js";
 import { readIntent } from "../core/intent/storage.js";
 import { generateSpec } from "../core/parsing/pr-parser.js";
@@ -69,7 +66,12 @@ async function runCheck(opts: {
 	}
 
 	log(opts, "Checking drift against intent...");
-	const signals: DriftSignal[] = detectDriftWithSpec(source, intent, spec.intent.change_type, spec.risk_flags);
+	const signals: DriftSignal[] = detectDriftWithSpec(
+		source,
+		intent,
+		spec.intent.change_type,
+		spec.risk_flags,
+	);
 
 	// Contract evaluation
 	let contractResults: ContractResult[] | undefined;

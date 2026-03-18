@@ -156,7 +156,7 @@ export function diffFragments(previous: SpecFragment[], current: SpecFragment[])
 			diffs.push({
 				fragment_type: type,
 				status: "added",
-				current_hash: curr!.content_hash,
+				current_hash: curr?.content_hash,
 			});
 		} else if (curr === undefined) {
 			diffs.push({
