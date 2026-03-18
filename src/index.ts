@@ -43,6 +43,29 @@ export {
 } from "./core/decisions/classifier.js";
 export { buildEnvelope } from "./core/protocol/envelope.js";
 export type { AgentProtocolEnvelope, ProtocolStatus } from "./core/protocol/envelope.js";
+// Gate engine
+export {
+	evaluateGate,
+	IntentGatePolicySchema,
+	type IntentGatePolicy,
+	type GateCheck,
+	type GateResult,
+} from "./core/gate/policy.js";
+export { readPolicy, writePolicy, getPolicyPath } from "./core/gate/storage.js";
+// Contract verification
+export {
+	ContractTypeSchema,
+	ContractSchema,
+	type Contract,
+	type ContractType,
+	type ContractResult,
+} from "./core/contracts/schema.js";
+export { evaluateContracts } from "./core/contracts/evaluator.js";
+export {
+	readContracts,
+	writeContracts,
+	getContractsPath,
+} from "./core/contracts/storage.js";
 // Graph engine
 export {
 	IntentNodeSchema,
@@ -67,8 +90,23 @@ export {
 	upsertNode,
 	addEdge,
 	createEmptyGraph,
+	buildChildMap,
 } from "./core/graph/propagation.js";
 export { readGraph, writeGraph, getGraphPath } from "./core/graph/storage.js";
+export {
+	materializeGateResult,
+	materializeContractResult,
+} from "./core/graph/materialize.js";
+export {
+	getDescendants,
+	getAncestors,
+	getNodesByType,
+	computeAggregateConfidence,
+	findImpactedNodes,
+	computeGraphStats,
+	type ImpactReport,
+	type GraphStats,
+} from "./core/graph/query.js";
 export {
 	ingestFeedback,
 	summarizeFeedback,

@@ -4,7 +4,8 @@ export type DriftSignalType =
 	| "risk_escalation"
 	| "size_overrun"
 	| "type_mismatch"
-	| "assumption_violation";
+	| "assumption_violation"
+	| "contract_violation";
 
 export interface DriftSignal {
 	type: DriftSignalType;

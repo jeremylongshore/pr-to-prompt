@@ -131,6 +131,7 @@ export const PromptSpecSchema = z.object({
 					"size_overrun",
 					"type_mismatch",
 					"assumption_violation",
+					"contract_violation",
 				]),
 				description: z.string(),
 				severity: z.enum(["low", "medium", "high"]),

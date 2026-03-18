@@ -115,6 +115,7 @@ export function mergeIntents(layers: IntentLayer[]): Intent {
 		max_risk,
 		expected_type,
 		size_budget,
+		status: "draft" as const,
 		created_at,
 		updated_at,
 	};

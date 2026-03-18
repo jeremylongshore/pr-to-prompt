@@ -2,6 +2,9 @@ import { Command } from "commander";
 import { type Intent, IntentSchema } from "../core/intent/schema.js";
 import { readIntent, writeIntent } from "../core/intent/storage.js";
 import { analyzeAssumptions, type Decision } from "../core/decisions/classifier.js";
+import { evaluateGate, IntentGatePolicySchema } from "../core/gate/policy.js";
+import { readPolicy } from "../core/gate/storage.js";
+import { readGraph } from "../core/graph/storage.js";
 import { buildLocalDiffSource } from "../core/sources/local.js";
 
 export const intentCommand = new Command("intent").description(
@@ -169,4 +172,167 @@ async function runIntentAnalyze(opts: {
 
 	const hasMustAsk = decisions.some((d) => d.action === "must_ask");
 	return hasMustAsk ? 3 : 0;
+}
+
+// ---------------------------------------------------------------------------
+// intent approve
+// ---------------------------------------------------------------------------
+
+intentCommand
+	.command("approve")
+	.description("Approve the current intent (draft → approved)")
+	.option("--by <name>", "Who is approving", "unknown")
+	.option("--json", "Output as JSON", false)
+	.action((opts) => {
+		const intent = readIntent();
+		if (!intent) {
+			if (opts.json) {
+				process.stdout.write(
+					`${JSON.stringify({ error: "no_intent" })}\n`,
+				);
+			} else {
+				console.error('No intent set. Use: pr-to-spec intent set --goal "..."');
+			}
+			process.exit(1);
+		}
+
+		if (intent.status === "locked") {
+			if (opts.json) {
+				process.stdout.write(
+					`${JSON.stringify({ error: "intent_locked" })}\n`,
+				);
+			} else {
+				console.error("Intent is locked and cannot be modified.");
+			}
+			process.exit(1);
+		}
+
+		const now = new Date().toISOString();
+		intent.status = "approved";
+		intent.approved_by = opts.by;
+		intent.approved_at = now;
+		intent.updated_at = now;
+		writeIntent(intent);
+
+		if (opts.json) {
+			process.stdout.write(`${JSON.stringify(intent, null, 2)}\n`);
+		} else {
+			console.log(`Intent approved by ${opts.by}`);
+		}
+	});
+
+// ---------------------------------------------------------------------------
+// intent lock
+// ---------------------------------------------------------------------------
+
+intentCommand
+	.command("lock")
+	.description("Lock the current intent (approved → locked)")
+	.option("--json", "Output as JSON", false)
+	.action((opts) => {
+		const intent = readIntent();
+		if (!intent) {
+			if (opts.json) {
+				process.stdout.write(
+					`${JSON.stringify({ error: "no_intent" })}\n`,
+				);
+			} else {
+				console.error('No intent set. Use: pr-to-spec intent set --goal "..."');
+			}
+			process.exit(1);
+		}
+
+		if (intent.status !== "approved") {
+			if (opts.json) {
+				process.stdout.write(
+					`${JSON.stringify({ error: "not_approved", status: intent.status })}\n`,
+				);
+			} else {
+				console.error(`Intent must be approved before locking. Current status: ${intent.status}`);
+			}
+			process.exit(1);
+		}
+
+		intent.status = "locked";
+		intent.updated_at = new Date().toISOString();
+		writeIntent(intent);
+
+		if (opts.json) {
+			process.stdout.write(`${JSON.stringify(intent, null, 2)}\n`);
+		} else {
+			console.log("Intent locked. No further modifications allowed.");
+		}
+	});
+
+// ---------------------------------------------------------------------------
+// intent gate
+// ---------------------------------------------------------------------------
+
+intentCommand
+	.command("gate")
+	.description("Evaluate intent gate policy")
+	.option("--branch <ref>", "Base branch to diff against (default: main)")
+	.option("--diff <n>", "Diff last N commits", (v: string) => Number.parseInt(v))
+	.option("--staged", "Analyze staged changes only", false)
+	.option("--json", "Output as JSON", false)
+	.action(async (opts) => {
+		try {
+			const exitCode = await runGate(opts);
+			process.exit(exitCode);
+		} catch (err) {
+			const message = err instanceof Error ? err.message : String(err);
+			if (!opts.json) console.error(`Error: ${message}`);
+			process.exit(1);
+		}
+	});
+
+async function runGate(opts: {
+	branch?: string;
+	diff?: number;
+	staged: boolean;
+	json: boolean;
+}): Promise<number> {
+	const intent = readIntent();
+	if (!intent) {
+		if (opts.json) {
+			process.stdout.write(
+				`${JSON.stringify({ error: "no_intent" })}\n`,
+			);
+		} else {
+			console.error('No intent set. Use: pr-to-spec intent set --goal "..."');
+		}
+		return 1;
+	}
+
+	const policy = readPolicy() ?? IntentGatePolicySchema.parse({});
+	const graph = readGraph();
+
+	let diff = null;
+	try {
+		diff = buildLocalDiffSource({
+			base: opts.branch,
+			commits: opts.diff,
+			staged: opts.staged,
+		});
+	} catch {
+		// No diff available — gate still evaluates approval + graph checks
+	}
+
+	const result = evaluateGate(graph, intent, diff, policy);
+
+	if (opts.json) {
+		process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+	} else {
+		if (result.passed) {
+			console.log("Gate PASSED");
+		} else {
+			console.log("Gate FAILED");
+		}
+		for (const check of result.checks) {
+			const icon = check.passed ? "PASS" : "FAIL";
+			console.log(`  [${icon}] ${check.name}: ${check.detail}`);
+		}
+	}
+
+	return result.passed ? 0 : 4;
 }

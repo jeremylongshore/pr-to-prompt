@@ -11,6 +11,8 @@ export const IntentNodeTypeSchema = z.enum([
 	"drift_signal",
 	"risk_flag",
 	"feedback",
+	"gate_check",
+	"contract_check",
 ]);
 
 export type IntentNodeType = z.infer<typeof IntentNodeTypeSchema>;

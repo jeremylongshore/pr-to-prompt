@@ -2,21 +2,10 @@ import type { IntentNode } from "./node.js";
 import type { IntentEdge, IntentGraph } from "./edge.js";
 
 /**
- * Mark a node as invalidated and propagate to all downstream children.
- * Implements the SemanticForge invalidation rule:
- *   When a node's content changes, mark all children as stale.
- *   Re-derive stale children. If hash unchanged, stop propagation.
- *
- * Returns the set of invalidated node IDs.
+ * Build a parent → children adjacency map from parent_ids and derives_from edges.
+ * Shared by propagation and query engines.
  */
-export function propagateInvalidation(
-	graph: IntentGraph,
-	changedNodeId: string,
-): Set<string> {
-	const invalidated = new Set<string>();
-	const now = new Date().toISOString();
-
-	// Build adjacency: parent -> children (via parent_ids and derives_from edges)
+export function buildChildMap(graph: IntentGraph): Map<string, string[]> {
 	const childrenOf = new Map<string, string[]>();
 	for (const node of graph.nodes) {
 		for (const parentId of node.parent_ids) {
@@ -34,6 +23,25 @@ export function propagateInvalidation(
 			childrenOf.set(edge.target_id, children);
 		}
 	}
+	return childrenOf;
+}
+
+/**
+ * Mark a node as invalidated and propagate to all downstream children.
+ * Implements the SemanticForge invalidation rule:
+ *   When a node's content changes, mark all children as stale.
+ *   Re-derive stale children. If hash unchanged, stop propagation.
+ *
+ * Returns the set of invalidated node IDs.
+ */
+export function propagateInvalidation(
+	graph: IntentGraph,
+	changedNodeId: string,
+): Set<string> {
+	const invalidated = new Set<string>();
+	const now = new Date().toISOString();
+
+	const childrenOf = buildChildMap(graph);
 
 	// BFS from changed node
 	const queue = [changedNodeId];

@@ -9,6 +9,9 @@ export const IntentSchema = z.object({
 		.enum(["feature", "bugfix", "refactor", "docs", "test", "chore", "config", "mixed"])
 		.optional(),
 	size_budget: z.number().int().positive().optional(),
+	status: z.enum(["draft", "approved", "locked"]).default("draft"),
+	approved_by: z.string().optional(),
+	approved_at: z.string().datetime().optional(),
 	created_at: z.string().datetime().optional(),
 	updated_at: z.string().datetime().optional(),
 });
