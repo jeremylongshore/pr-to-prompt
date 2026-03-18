@@ -48,6 +48,9 @@ export function ingestFeedback(
 			node_type: "feedback",
 			content,
 			parent_ids: targetNodeIds,
+			// Confidence reflects how much the feedback validates the upstream intent:
+			// approved (0.9) = strong signal that intent was correctly captured
+			// changes_requested/commented (0.3) = weak signal, intent likely needs revision
 			confidence: review.status === "approved" ? 0.9 : 0.3,
 			source: "feedback",
 			invalidated_at: null,
@@ -86,6 +89,9 @@ export function ingestFeedback(
 			node_type: "feedback",
 			content,
 			parent_ids: targetNodeIds,
+			// Confidence reflects CI signal strength:
+			// passed (0.95) = near-certain the code matches intent
+			// failed (0.1) = strong negative signal, upstream nodes likely wrong
 			confidence: ci.status === "passed" ? 0.95 : 0.1,
 			source: "feedback",
 			invalidated_at: null,

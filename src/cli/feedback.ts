@@ -18,7 +18,7 @@ feedbackCommand
 	.requiredOption("--reviewer <name>", "Reviewer name")
 	.requiredOption("--status <status>", "Review status: approved, changes_requested, commented")
 	.option("--comment <text...>", "Review comments (can repeat)")
-	.option("--target <id...>", "Target node IDs to attach feedback to")
+	.requiredOption("--target <id...>", "Target node IDs to attach feedback to")
 	.option("--json", "Output as JSON", false)
 	.action((opts) => {
 		const graph = readGraph();
@@ -29,7 +29,7 @@ feedbackCommand
 			comments: opts.comment ?? [],
 		};
 
-		const targetIds = opts.target ?? graph.nodes.map((n) => n.node_id).slice(-1);
+		const targetIds: string[] = opts.target;
 
 		const createdIds = ingestFeedback(graph, { type: "review", data: review }, targetIds);
 
@@ -63,7 +63,7 @@ feedbackCommand
 	.requiredOption("--pipeline <name>", "Pipeline/workflow name")
 	.requiredOption("--status <status>", "CI status: passed, failed")
 	.option("--failure <text...>", "Failure descriptions (can repeat)")
-	.option("--target <id...>", "Target node IDs to attach feedback to")
+	.requiredOption("--target <id...>", "Target node IDs to attach feedback to")
 	.option("--json", "Output as JSON", false)
 	.action((opts) => {
 		const graph = readGraph();
@@ -74,7 +74,7 @@ feedbackCommand
 			failures: opts.failure,
 		};
 
-		const targetIds = opts.target ?? graph.nodes.map((n) => n.node_id).slice(-1);
+		const targetIds: string[] = opts.target;
 
 		const createdIds = ingestFeedback(graph, { type: "ci", data: ci }, targetIds);
 

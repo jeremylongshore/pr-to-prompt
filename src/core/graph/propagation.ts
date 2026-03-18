@@ -45,11 +45,9 @@ export function propagateInvalidation(
 		for (const childId of children) {
 			if (!invalidated.has(childId)) {
 				invalidated.add(childId);
-				// Mark the node as invalidated
 				const node = graph.nodes.find((n) => n.node_id === childId);
 				if (node) {
 					node.invalidated_at = now;
-					node.version += 1;
 				}
 				queue.push(childId);
 			}
@@ -60,7 +58,6 @@ export function propagateInvalidation(
 	const changedNode = graph.nodes.find((n) => n.node_id === changedNodeId);
 	if (changedNode) {
 		changedNode.invalidated_at = now;
-		changedNode.version += 1;
 	}
 
 	return invalidated;
@@ -75,11 +72,13 @@ export function getStaleNodes(graph: IntentGraph): IntentNode[] {
 
 /**
  * Clear invalidation for a node (after re-derivation).
+ * Bumps the version to track successful re-derivation count.
  */
 export function clearInvalidation(graph: IntentGraph, nodeId: string): void {
 	const node = graph.nodes.find((n) => n.node_id === nodeId);
 	if (node) {
 		node.invalidated_at = null;
+		node.version += 1;
 		node.updated_at = new Date().toISOString();
 	}
 }
