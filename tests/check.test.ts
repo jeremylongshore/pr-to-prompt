@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { DiffSource } from "../src/core/sources/types.js";
 import type { DriftSignal } from "../src/core/drift/signals.js";
 import type { Intent } from "../src/core/intent/schema.js";
 import type { PromptSpec } from "../src/core/schema/prompt-spec.js";
+import type { DiffSource } from "../src/core/sources/types.js";
 
 // ---------------------------------------------------------------------------
 // Module-level mocks — must come before any import of the module under test
@@ -25,10 +25,10 @@ vi.mock("../src/core/parsing/pr-parser.js", () => ({
 // Lazy imports (after mocks are registered)
 // ---------------------------------------------------------------------------
 
-import { buildLocalDiffSource } from "../src/core/sources/local.js";
+import { checkCommand } from "../src/cli/check.js";
 import { readIntent } from "../src/core/intent/storage.js";
 import { generateSpec } from "../src/core/parsing/pr-parser.js";
-import { checkCommand } from "../src/cli/check.js";
+import { buildLocalDiffSource } from "../src/core/sources/local.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -69,9 +69,7 @@ function makeSpec(overrides: Partial<PromptSpec> = {}): PromptSpec {
 		summary: "Feature by dev",
 		intent: { likely_goal: "Add feature", change_type: "feature" },
 		scope: { include: ["src/**"], exclude: [] },
-		affected_files: [
-			{ filename: "src/feature.ts", status: "added", additions: 20, deletions: 0 },
-		],
+		affected_files: [{ filename: "src/feature.ts", status: "added", additions: 20, deletions: 0 }],
 		constraints: [],
 		acceptance_criteria: [],
 		verification: { tests_required: ["unit"], manual_checks: [] },
@@ -127,7 +125,7 @@ describe("checkCommand — runCheck behavior", () => {
 	// and only capture the first invocation, then suppress subsequent ones so the
 	// action's catch block doesn't re-throw with exit code 1.
 	async function runAction(args: string[] = []): Promise<number> {
-		let capturedExitCode: number = -1;
+		let capturedExitCode = -1;
 		vi.spyOn(process, "exit").mockImplementation((code?: number | string) => {
 			const numeric = typeof code === "number" ? code : Number(code ?? 0);
 			if (capturedExitCode === -1) {
@@ -203,9 +201,7 @@ describe("checkCommand — runCheck behavior", () => {
 	// -------------------------------------------------------------------------
 
 	it("exits 3 when scope_creep detected", async () => {
-		vi.mocked(readIntent).mockReturnValue(
-			makeIntent({ expected_scope: ["src/middleware/**"] }),
-		);
+		vi.mocked(readIntent).mockReturnValue(makeIntent({ expected_scope: ["src/middleware/**"] }));
 		// File outside expected_scope triggers scope_creep
 		vi.mocked(buildLocalDiffSource).mockReturnValue(
 			makeDiffSource({
@@ -225,9 +221,7 @@ describe("checkCommand — runCheck behavior", () => {
 	});
 
 	it("signals array includes scope_creep type when scope violated", async () => {
-		vi.mocked(readIntent).mockReturnValue(
-			makeIntent({ expected_scope: ["src/middleware/**"] }),
-		);
+		vi.mocked(readIntent).mockReturnValue(makeIntent({ expected_scope: ["src/middleware/**"] }));
 		vi.mocked(buildLocalDiffSource).mockReturnValue(
 			makeDiffSource({
 				files: [
@@ -253,9 +247,7 @@ describe("checkCommand — runCheck behavior", () => {
 	// -------------------------------------------------------------------------
 
 	it("exits 3 when forbidden_touch detected", async () => {
-		vi.mocked(readIntent).mockReturnValue(
-			makeIntent({ forbidden_scope: ["src/db/**"] }),
-		);
+		vi.mocked(readIntent).mockReturnValue(makeIntent({ forbidden_scope: ["src/db/**"] }));
 		vi.mocked(buildLocalDiffSource).mockReturnValue(
 			makeDiffSource({
 				files: [
@@ -274,9 +266,7 @@ describe("checkCommand — runCheck behavior", () => {
 	});
 
 	it("signals array includes forbidden_touch type when forbidden file modified", async () => {
-		vi.mocked(readIntent).mockReturnValue(
-			makeIntent({ forbidden_scope: ["src/db/**"] }),
-		);
+		vi.mocked(readIntent).mockReturnValue(makeIntent({ forbidden_scope: ["src/db/**"] }));
 		vi.mocked(buildLocalDiffSource).mockReturnValue(
 			makeDiffSource({
 				files: [
@@ -342,9 +332,7 @@ describe("checkCommand — runCheck behavior", () => {
 	});
 
 	it("--json envelope status is 'drift_detected' when drift signals present", async () => {
-		vi.mocked(readIntent).mockReturnValue(
-			makeIntent({ forbidden_scope: ["src/db/**"] }),
-		);
+		vi.mocked(readIntent).mockReturnValue(makeIntent({ forbidden_scope: ["src/db/**"] }));
 		vi.mocked(buildLocalDiffSource).mockReturnValue(
 			makeDiffSource({
 				files: [
@@ -371,11 +359,13 @@ describe("checkCommand — runCheck behavior", () => {
 
 	it("exits 0 when no files changed and no intent set", async () => {
 		vi.mocked(readIntent).mockReturnValue(null);
-		vi.mocked(buildLocalDiffSource).mockReturnValue(
-			makeDiffSource({ files: [] }),
-		);
+		vi.mocked(buildLocalDiffSource).mockReturnValue(makeDiffSource({ files: [] }));
 		vi.mocked(generateSpec).mockReturnValue(
-			makeSpec({ risk_flags: [], affected_files: [], stats: { files_changed: 0, additions: 0, deletions: 0, commits: 0 } }),
+			makeSpec({
+				risk_flags: [],
+				affected_files: [],
+				stats: { files_changed: 0, additions: 0, deletions: 0, commits: 0 },
+			}),
 		);
 		const code = await runAction();
 		expect(code).toBe(0);
@@ -383,11 +373,13 @@ describe("checkCommand — runCheck behavior", () => {
 
 	it("exits 0 when no files changed and intent set (no drift possible)", async () => {
 		vi.mocked(readIntent).mockReturnValue(makeIntent({ expected_scope: ["src/**"] }));
-		vi.mocked(buildLocalDiffSource).mockReturnValue(
-			makeDiffSource({ files: [] }),
-		);
+		vi.mocked(buildLocalDiffSource).mockReturnValue(makeDiffSource({ files: [] }));
 		vi.mocked(generateSpec).mockReturnValue(
-			makeSpec({ risk_flags: [], affected_files: [], stats: { files_changed: 0, additions: 0, deletions: 0, commits: 0 } }),
+			makeSpec({
+				risk_flags: [],
+				affected_files: [],
+				stats: { files_changed: 0, additions: 0, deletions: 0, commits: 0 },
+			}),
 		);
 		const code = await runAction();
 		expect(code).toBe(0);

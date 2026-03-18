@@ -1,5 +1,13 @@
 import { Command } from "commander";
+import { evaluateContracts } from "../core/contracts/evaluator.js";
+import type { ContractResult } from "../core/contracts/schema.js";
+import { readContracts } from "../core/contracts/storage.js";
 import { detectDriftWithSpec } from "../core/drift/detector.js";
+import type { DriftSignal } from "../core/drift/signals.js";
+import { type GateResult, IntentGatePolicySchema, evaluateGate } from "../core/gate/policy.js";
+import { readPolicy } from "../core/gate/storage.js";
+import { materializeContractResult, materializeGateResult } from "../core/graph/materialize.js";
+import { readGraph, writeGraph } from "../core/graph/storage.js";
 import { readIntent } from "../core/intent/storage.js";
 import { generateSpec } from "../core/parsing/pr-parser.js";
 import { buildEnvelope } from "../core/protocol/envelope.js";
@@ -58,10 +66,56 @@ async function runCheck(opts: {
 	}
 
 	log(opts, "Checking drift against intent...");
-	const signals = detectDriftWithSpec(source, intent, spec.intent.change_type, spec.risk_flags);
+	const signals: DriftSignal[] = detectDriftWithSpec(
+		source,
+		intent,
+		spec.intent.change_type,
+		spec.risk_flags,
+	);
+
+	// Contract evaluation
+	let contractResults: ContractResult[] | undefined;
+	const contracts = readContracts();
+	if (contracts.length > 0) {
+		log(opts, `Evaluating ${contracts.length} contract(s)...`);
+		contractResults = evaluateContracts(contracts, source, spec);
+		// Append violations as drift signals
+		for (const cr of contractResults) {
+			if (!cr.passed) {
+				signals.push({
+					type: "contract_violation",
+					description: cr.detail,
+					severity: cr.severity === "blocking" ? "high" : "medium",
+					details: [cr.contract_id, cr.contract_type],
+				});
+			}
+		}
+	}
+
+	// Gate evaluation (when policy exists)
+	let gateResult: GateResult | undefined;
+	const policy = readPolicy();
+	if (policy) {
+		log(opts, "Evaluating gate policy...");
+		const graph = readGraph();
+		gateResult = evaluateGate(graph, intent, source, policy);
+	}
+
+	// Materialize results into graph (audit trail)
+	if (gateResult || contractResults) {
+		const graph = readGraph();
+		if (gateResult) materializeGateResult(graph, gateResult);
+		if (contractResults) materializeContractResult(graph, contractResults);
+		writeGraph(graph);
+	}
 
 	if (opts.json) {
-		const envelope = buildEnvelope("check", spec, { signals, intent });
+		const envelope = buildEnvelope("check", spec, {
+			signals,
+			intent,
+			gate_result: gateResult,
+			contracts: contractResults,
+		});
 		process.stdout.write(`${JSON.stringify(envelope, null, 2)}\n`);
 	} else {
 		if (signals.length === 0) {
@@ -75,8 +129,15 @@ async function runCheck(opts: {
 				}
 			}
 		}
+		if (gateResult) {
+			console.log(gateResult.passed ? "Gate: PASSED" : "Gate: FAILED");
+			for (const c of gateResult.blocking_checks) {
+				console.log(`  [FAIL] ${c.name}: ${c.detail}`);
+			}
+		}
 	}
 
+	if (gateResult && !gateResult.passed) return 4;
 	if (signals.length > 0) return 3;
 	const hasHighRisk = spec.risk_flags.some((r) => r.severity === "high");
 	return hasHighRisk ? 2 : 0;

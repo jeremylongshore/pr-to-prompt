@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { z } from "zod";
 
 export const FileChangeSchema = z.object({
@@ -7,6 +8,24 @@ export const FileChangeSchema = z.object({
 	deletions: z.number(),
 	patch: z.string().optional(),
 });
+
+export const SpecFragmentSchema = z.object({
+	fragment_id: z.string(), // content hash (SHA-256 hex, first 12 chars)
+	fragment_type: z.enum([
+		"intent",
+		"scope",
+		"files",
+		"constraints",
+		"verification",
+		"risks",
+		"semantics",
+	]),
+	content: z.unknown(), // The actual content for this fragment
+	content_hash: z.string(), // Full SHA-256 hex of JSON.stringify(content)
+	parent_fragment_ids: z.array(z.string()).default([]), // DAG edges to upstream fragments
+});
+
+export type SpecFragment = z.infer<typeof SpecFragmentSchema>;
 
 export const PromptSpecSchema = z.object({
 	version: z.literal(1),
@@ -111,6 +130,8 @@ export const PromptSpecSchema = z.object({
 					"risk_escalation",
 					"size_overrun",
 					"type_mismatch",
+					"assumption_violation",
+					"contract_violation",
 				]),
 				description: z.string(),
 				severity: z.enum(["low", "medium", "high"]),
@@ -128,7 +149,42 @@ export const PromptSpecSchema = z.object({
 			size_budget: z.number().optional(),
 		})
 		.optional(),
+	fragments: z.array(SpecFragmentSchema).optional(),
 });
 
 export type PromptSpec = z.infer<typeof PromptSpecSchema>;
 export type FileChange = z.infer<typeof FileChangeSchema>;
+
+/**
+ * Recursively stringify an object with sorted keys for deterministic output.
+ */
+export function stableStringify(value: unknown): string {
+	if (value === null || typeof value !== "object") {
+		return JSON.stringify(value);
+	}
+	if (Array.isArray(value)) {
+		return `[${value.map(stableStringify).join(",")}]`;
+	}
+	const obj = value as Record<string, unknown>;
+	const sorted = Object.keys(obj)
+		.sort()
+		.map((k) => `${JSON.stringify(k)}:${stableStringify(obj[k])}`)
+		.join(",");
+	return `{${sorted}}`;
+}
+
+/**
+ * Compute a SHA-256 content hash of any value using stable key ordering.
+ * Returns the full hex digest.
+ */
+export function computeContentHash(content: unknown): string {
+	return createHash("sha256").update(stableStringify(content)).digest("hex");
+}
+
+/**
+ * Derive a short fragment ID from a full content hash.
+ * Returns the first 12 hex characters.
+ */
+export function computeFragmentId(hash: string): string {
+	return hash.slice(0, 12);
+}

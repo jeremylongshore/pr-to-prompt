@@ -15,8 +15,8 @@ vi.mock("../src/core/intent/storage.js", () => ({
 // Lazy imports (after mocks are registered)
 // ---------------------------------------------------------------------------
 
-import { readIntent, writeIntent } from "../src/core/intent/storage.js";
 import { intentCommand } from "../src/cli/intent.js";
+import { readIntent, writeIntent } from "../src/core/intent/storage.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -106,14 +106,7 @@ describe("intent set", () => {
 	// -------------------------------------------------------------------------
 
 	it("outputs JSON when --json flag is set", async () => {
-		await intentCommand.parseAsync([
-			"node",
-			"intent",
-			"set",
-			"--goal",
-			"Add pagination",
-			"--json",
-		]);
+		await intentCommand.parseAsync(["node", "intent", "set", "--goal", "Add pagination", "--json"]);
 
 		expect(consoleLogSpy).toHaveBeenCalledOnce();
 		const output = consoleLogSpy.mock.calls[0][0] as string;
@@ -127,13 +120,7 @@ describe("intent set", () => {
 	// -------------------------------------------------------------------------
 
 	it("prints confirmation message when --json not set", async () => {
-		await intentCommand.parseAsync([
-			"node",
-			"intent",
-			"set",
-			"--goal",
-			"Refactor auth module",
-		]);
+		await intentCommand.parseAsync(["node", "intent", "set", "--goal", "Refactor auth module"]);
 
 		expect(consoleLogSpy).toHaveBeenCalledOnce();
 		const msg = consoleLogSpy.mock.calls[0][0] as string;
@@ -147,17 +134,9 @@ describe("intent set", () => {
 
 	it("preserves created_at from existing intent on update", async () => {
 		const originalCreatedAt = "2025-12-01T00:00:00.000Z";
-		vi.mocked(readIntent).mockReturnValue(
-			makeIntent({ created_at: originalCreatedAt }),
-		);
+		vi.mocked(readIntent).mockReturnValue(makeIntent({ created_at: originalCreatedAt }));
 
-		await intentCommand.parseAsync([
-			"node",
-			"intent",
-			"set",
-			"--goal",
-			"Updated goal",
-		]);
+		await intentCommand.parseAsync(["node", "intent", "set", "--goal", "Updated goal"]);
 
 		expect(writeIntent).toHaveBeenCalledOnce();
 		const saved = vi.mocked(writeIntent).mock.calls[0][0];
@@ -166,17 +145,9 @@ describe("intent set", () => {
 
 	it("updates updated_at to a newer timestamp on update", async () => {
 		const originalUpdatedAt = "2025-12-01T00:00:00.000Z";
-		vi.mocked(readIntent).mockReturnValue(
-			makeIntent({ updated_at: originalUpdatedAt }),
-		);
+		vi.mocked(readIntent).mockReturnValue(makeIntent({ updated_at: originalUpdatedAt }));
 
-		await intentCommand.parseAsync([
-			"node",
-			"intent",
-			"set",
-			"--goal",
-			"Updated goal",
-		]);
+		await intentCommand.parseAsync(["node", "intent", "set", "--goal", "Updated goal"]);
 
 		expect(writeIntent).toHaveBeenCalledOnce();
 		const saved = vi.mocked(writeIntent).mock.calls[0][0];
@@ -217,13 +188,7 @@ describe("intent set", () => {
 	it("creates new created_at when no prior intent exists", async () => {
 		vi.mocked(readIntent).mockReturnValue(null);
 
-		await intentCommand.parseAsync([
-			"node",
-			"intent",
-			"set",
-			"--goal",
-			"Brand new project goal",
-		]);
+		await intentCommand.parseAsync(["node", "intent", "set", "--goal", "Brand new project goal"]);
 
 		const saved = vi.mocked(writeIntent).mock.calls[0][0];
 		expect(saved.created_at).toBeDefined();
@@ -253,9 +218,7 @@ describe("intent show", () => {
 	// -------------------------------------------------------------------------
 
 	it("prints goal when intent exists", async () => {
-		vi.mocked(readIntent).mockReturnValue(
-			makeIntent({ goal: "Add rate limiting" }),
-		);
+		vi.mocked(readIntent).mockReturnValue(makeIntent({ goal: "Add rate limiting" }));
 
 		await intentCommand.parseAsync(["node", "intent", "show"]);
 
