@@ -1,0 +1,37 @@
+name: Sync Gist
+on:
+  push:
+    branches: [main]
+    paths: ['README.md', 'CHANGELOG.md', 'VERSION', 'scripts/generate-gist.ts']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sync-gist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: npx tsx scripts/generate-gist.ts > /tmp/gist-content.md
+
+      - name: Update gist
+        env:
+          GH_TOKEN: ${{ secrets.GIST_TOKEN }}
+        run: |
+          GIST_ID=$(cat .gist-id)
+          gh gist edit "$GIST_ID" \
+            -f "0-pr-to-spec-one-pager-and-operator-audit.md" \
+            /tmp/gist-content.md
