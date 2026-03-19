@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **MCP Server** (`servers/pr-spec-analyzer.ts`) — 6-tool Model Context Protocol server exposing `analyze_pr`, `scan_local`, `check_drift`, `set_intent`, `show_intent`, and `analyze_assumptions` via stdio transport
+- **Claude Code plugin metadata** (`.claude-plugin/plugin.json`, `.mcp.json`) — enables pr-to-spec as a standalone MCP plugin for Claude Code, Cursor, and Windsurf
+- `@modelcontextprotocol/sdk` dependency for MCP protocol compliance
+
 ## [0.8.0] - 2026-03-18
 
 ### Security
