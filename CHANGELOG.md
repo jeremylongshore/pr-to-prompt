@@ -7,12 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-03-18
+
 ### Added
 - **MCP Server** (`servers/pr-spec-analyzer.ts`) — 6-tool Model Context Protocol server exposing `analyze_pr`, `scan_local`, `check_drift`, `set_intent`, `show_intent`, and `analyze_assumptions` via stdio transport
 - **Claude Code plugin metadata** (`.claude-plugin/plugin.json`, `.mcp.json`) — enables pr-to-spec as a standalone MCP plugin for Claude Code, Cursor, and Windsurf
 - `@modelcontextprotocol/sdk` dependency for MCP protocol compliance
-
-## [0.8.0] - 2026-03-18
+- `--debug` flag for CLI — logs API request URLs, git commands, and timing info to stderr
+- `PR_TO_SPEC_DIR` env var — configurable storage directory (default: `.pr-to-spec`)
+- Security test suite (`tests/security.test.ts`) — webhook URL validation, custom_command rejection, prototype pollution guard
+- API error test suite (`tests/github-errors.test.ts`) — 401, 403, 404, 422, rate limit, large PR truncation
+- README: documented all subcommands (`intent`, `check`, `contract`, `graph`, `feedback`)
+- README: exit code 4 (`gate_failed`)
+- README: troubleshooting section with common errors
 
 ### Security
 - **Removed `custom_command` contract type** — eliminated command injection vector from arbitrary shell execution. The type is preserved in the schema but always fails with a clear deprecation message.
@@ -26,15 +33,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **API error messages** — GitHub API errors now return user-friendly messages instead of raw Octokit exceptions (401, 403, 404, 422, rate limit)
 - **Git error messages** — `scan`/`check` commands now surface clear messages for "not a git repo" and "unknown revision" errors
 - **Large PR warning** — warns when GitHub API returns 300 files (the per-page maximum), indicating truncation
-
-### Added
-- `--debug` flag for CLI — logs API request URLs, git commands, and timing info to stderr
-- `PR_TO_SPEC_DIR` env var — configurable storage directory (default: `.pr-to-spec`)
-- Security test suite (`tests/security.test.ts`) — webhook URL validation, custom_command rejection, prototype pollution guard
-- API error test suite (`tests/github-errors.test.ts`) — 401, 403, 404, 422, rate limit, large PR truncation
-- README: documented all subcommands (`intent`, `check`, `contract`, `graph`, `feedback`)
-- README: exit code 4 (`gate_failed`)
-- README: troubleshooting section with common errors
 
 ### Changed
 - 384 tests passing (all existing tests updated for security changes)
