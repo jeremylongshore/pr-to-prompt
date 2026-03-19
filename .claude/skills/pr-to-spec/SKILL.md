@@ -1,7 +1,7 @@
 ---
 name: pr-to-spec
 description: Analyze code changes and detect intent drift using pr-to-spec CLI
-version: 0.6.0
+version: 0.8.0
 author: Jeremy Longshore
 triggers:
   - /pr-to-spec

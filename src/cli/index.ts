@@ -104,7 +104,9 @@ async function run(opts: CLIOptions): Promise<number> {
 	const octokit = createClient(token);
 	const prData = await fetchPR(octokit, owner, repo, opts.pr);
 	if (opts.debug) {
-		console.error(`[debug] Fetched PR in ${Date.now() - startTime}ms (${prData.files.length} files)`);
+		console.error(
+			`[debug] Fetched PR in ${Date.now() - startTime}ms (${prData.files.length} files)`,
+		);
 	}
 
 	log(opts, `Generating prompt-spec for: "${prData.title}"`);

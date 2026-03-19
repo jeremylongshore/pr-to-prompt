@@ -124,8 +124,7 @@ export async function fetchPR(
 function mapGitHubError(err: unknown, owner: string, repo: string, prNumber: number): Error {
 	if (err && typeof err === "object" && "status" in err) {
 		const status = (err as { status: number }).status;
-		const headers = (err as { response?: { headers?: Record<string, string> } }).response
-			?.headers;
+		const headers = (err as { response?: { headers?: Record<string, string> } }).response?.headers;
 
 		switch (status) {
 			case 401:

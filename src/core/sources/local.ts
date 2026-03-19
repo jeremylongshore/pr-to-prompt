@@ -173,7 +173,9 @@ export function buildLocalDiffSource(opts: LocalDiffOptions = {}): DiffSource {
 
 function mapGitError(err: unknown, command: string, cwd: string): Error {
 	const stderr =
-		err && typeof err === "object" && "stderr" in err ? String((err as { stderr: unknown }).stderr) : "";
+		err && typeof err === "object" && "stderr" in err
+			? String((err as { stderr: unknown }).stderr)
+			: "";
 	const message = err instanceof Error ? err.message : String(err);
 
 	if (/not a git repository/i.test(stderr) || /not a git repository/i.test(message)) {
@@ -183,12 +185,11 @@ function mapGitError(err: unknown, command: string, cwd: string): Error {
 	}
 
 	if (/unknown revision/i.test(stderr) || /unknown revision/i.test(message)) {
-		const refMatch = stderr.match(/unknown revision.*?'([^']+)'/i) ??
+		const refMatch =
+			stderr.match(/unknown revision.*?'([^']+)'/i) ??
 			message.match(/unknown revision.*?'([^']+)'/i);
 		const ref = refMatch?.[1] ?? "the specified ref";
-		return new Error(
-			`Branch or ref '${ref}' not found. Check that it exists with: git branch -a`,
-		);
+		return new Error(`Branch or ref '${ref}' not found. Check that it exists with: git branch -a`);
 	}
 
 	return new Error(`Git command failed: ${command}\n${stderr || message}`);
