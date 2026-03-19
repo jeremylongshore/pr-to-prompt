@@ -4,7 +4,7 @@
 
 CodeRabbit reviews for humans. `pr-to-spec` converts for agents.
 
-Turn any code change — a GitHub PR, a local branch, staged edits — into a structured, agent-consumable spec with intent drift detection. No MCP server needed. The CLI *is* the API.
+Turn any code change — a GitHub PR, a local branch, staged edits — into a structured, agent-consumable spec with intent drift detection. CLI *and* MCP server — use it from the terminal or as a plugin in Claude Code, Cursor, and Windsurf.
 
 [![CI](https://github.com/jeremylongshore/pr-to-spec/actions/workflows/ci.yml/badge.svg)](https://github.com/jeremylongshore/pr-to-spec/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
@@ -71,6 +71,44 @@ pr-to-spec --repo owner/repo --pr 42 --json | jq '.spec.risk_flags'
 # Feed to Claude for review
 pr-to-spec --repo owner/repo --pr 42 --json \
   | claude --print "Review this spec and decide: approve, request changes, or needs info"
+```
+
+---
+
+## MCP Server
+
+pr-to-spec ships an MCP server for IDE integration. When installed as a Claude Code plugin, these tools are available automatically.
+
+### Tools
+
+| Tool | Description |
+|------|-------------|
+| `analyze_pr` | Analyze a GitHub PR and generate a structured spec |
+| `scan_local` | Scan local git changes (branch, staged, commits) |
+| `check_drift` | Check changes against declared intent for drift |
+| `set_intent` | Declare what a code change should accomplish |
+| `show_intent` | Show the current intent declaration |
+| `analyze_assumptions` | Surface implicit decisions with 2x2 matrix |
+
+### Plugin Installation
+
+Install as a Claude Code plugin:
+
+```bash
+claude plugin add jeremylongshore/pr-to-spec
+```
+
+Or add to your project's `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "pr-spec-analyzer": {
+      "command": "node",
+      "args": ["path/to/dist/servers/pr-spec-analyzer.js"]
+    }
+  }
+}
 ```
 
 ---
@@ -299,6 +337,7 @@ Built-in heuristic rules flag changes to:
 
 ```
 src/
+  servers/        MCP server (6 tools via stdio transport)
   cli/            CLI entrypoints (analyze, scan, intent, check)
   action/         GitHub Action entrypoint
   core/
