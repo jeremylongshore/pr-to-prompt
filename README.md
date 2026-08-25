@@ -11,6 +11,8 @@ Turn any code change — a GitHub PR, a local branch, staged edits — into a st
 [![Gist: One-Pager & Audit](https://img.shields.io/badge/gist-one--pager%20%26%20audit-blue)](https://gist.github.com/jeremylongshore/5b2de7ba9baca1eaaa0a757b5b0c48db)
 [![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://jeremylongshore.github.io/pr-to-prompt/)
 
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/U5S225PTME)
+
 ---
 
 ## What It Does
