@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
-- Upgraded the documentation site to Astro 7.3.1 and pinned vulnerable transitive dependency paths to patched releases; full and production-only pnpm audits now report zero known vulnerabilities.
+- Upgraded the documentation site to Astro 7.3.1, pinned vulnerable transitive paths to patched releases, and replaced a CWE-502-deprecated structured-clone path; full and production-only pnpm audits now report zero known vulnerabilities.
 - Raised the site runtime floor to Node.js 22.12 and added pull-request audit, test, typecheck, and build gates so dependency and framework upgrades are verified before deployment.
 - Escaped changelog text before applying its constrained bold/code rendering, preventing repository content from injecting executable HTML into the published page.
 
