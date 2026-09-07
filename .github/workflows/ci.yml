@@ -38,3 +38,39 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+  site:
+    name: Site Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+          cache-dependency-path: site/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+        working-directory: site
+
+      - run: pnpm audit --audit-level high
+        working-directory: site
+
+      - run: pnpm audit --prod --audit-level high
+        working-directory: site
+
+      - run: pnpm typecheck
+        working-directory: site
+
+      - run: pnpm test
+        working-directory: site
+
+      - run: pnpm build
+        working-directory: site
+
+      - run: test -f site/dist/index.html
