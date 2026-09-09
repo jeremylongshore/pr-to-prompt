@@ -1,6 +1,7 @@
 node_modules/
-dist/
+dist/*
 !dist/action-bundle/
+!dist/mcp-bundle/
 *.tsbuildinfo
 .env
 .env.local
