@@ -7,9 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Expanded the `pr-to-spec` skill into a marketplace-grade operator guide with
+  current Node.js requirements, all five exit states, remote-authentication
+  boundaries, and an agent-protocol reference.
+
+### Security
+
+- Execute local Git inspection with `execFileSync` argument arrays instead of a
+  shell, preventing command substitution through untrusted refs and filenames.
+- Remove the GitHub token from the MCP `analyze_pr` tool-input schema; the
+  server now accepts credentials only through its environment.
+- Update the MCP SDK to 1.30.0 and YAML to 2.9.0, clearing all known production
+  dependency vulnerabilities.
+
+### Fixed
+
+- Require `--repo` and `--pr` only for root GitHub-PR analysis so documented
+  local `scan`, `check`, and `intent` subcommands can execute independently.
+- Ship a self-contained MCP bundle, declare the custom skill path in the plugin
+  manifest, and replace stale repository and installation links with the real
+  `jeremylongshore/pr-to-prompt` source.
+
 ## [0.8.0] - 2026-03-18
 
 ### Added
+
 - **MCP Server** (`servers/pr-spec-analyzer.ts`) — 6-tool Model Context Protocol server exposing `analyze_pr`, `scan_local`, `check_drift`, `set_intent`, `show_intent`, and `analyze_assumptions` via stdio transport
 - **Claude Code plugin metadata** (`.claude-plugin/plugin.json`, `.mcp.json`) — enables pr-to-spec as a standalone MCP plugin for Claude Code, Cursor, and Windsurf
 - `@modelcontextprotocol/sdk` dependency for MCP protocol compliance

@@ -22,8 +22,8 @@ program
 	.name("pr-to-spec")
 	.description("Convert code changes into structured, agent-consumable spec artifacts")
 	.version("0.8.0")
-	.requiredOption("--repo <owner/name>", "GitHub repository (owner/name)")
-	.requiredOption("--pr <number>", "Pull request number", Number.parseInt)
+	.option("--repo <owner/name>", "GitHub repository (owner/name)")
+	.option("--pr <number>", "Pull request number", Number.parseInt)
 	.option("--out <directory>", "Output directory", "./output")
 	.option("--token <token>", "GitHub token (or set GITHUB_TOKEN env var)")
 	.option("--comment", "Post spec summary as a PR comment", false)
@@ -50,8 +50,8 @@ program
 	});
 
 interface CLIOptions {
-	repo: string;
-	pr: number;
+	repo?: string;
+	pr?: number;
 	out: string;
 	token?: string;
 	comment: boolean;
@@ -80,6 +80,13 @@ async function run(opts: CLIOptions): Promise<number> {
 		opts.quiet = true;
 	}
 
+	if (!opts.repo) {
+		throw new Error("GitHub repository required. Pass --repo owner/name.");
+	}
+	if (opts.pr === undefined || Number.isNaN(opts.pr) || opts.pr < 1) {
+		throw new Error("Pull request number must be a positive integer. Pass --pr NUMBER.");
+	}
+
 	const token = opts.token ?? process.env.GITHUB_TOKEN;
 	if (!token) {
 		throw new Error(
@@ -90,10 +97,6 @@ async function run(opts: CLIOptions): Promise<number> {
 	const [owner, repo] = opts.repo.split("/");
 	if (!owner || !repo) {
 		throw new Error("Repository must be in owner/name format (e.g., octocat/hello-world)");
-	}
-
-	if (Number.isNaN(opts.pr) || opts.pr < 1) {
-		throw new Error("PR number must be a positive integer");
 	}
 
 	log(opts, `Fetching PR #${opts.pr} from ${opts.repo}...`);

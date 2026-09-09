@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
 // Mock node:child_process at module level so buildLocalDiffSource never calls real git
-vi.mock("node:child_process", () => ({
-	execSync: vi.fn((cmd: string) => {
+const { execFileSyncMock } = vi.hoisted(() => ({
+	execFileSyncMock: vi.fn((_file: string, args: string[]) => {
+		const cmd = args.join(" ");
 		if (cmd.includes("rev-parse --abbrev-ref")) return "feat/my-branch";
 		if (cmd.includes("config user.name")) return "developer";
 		if (cmd.includes("rev-list --count")) return "3";
@@ -12,6 +13,10 @@ vi.mock("node:child_process", () => ({
 		// per-file patch
 		return "+changed line\n";
 	}),
+}));
+
+vi.mock("node:child_process", () => ({
+	execFileSync: execFileSyncMock,
 }));
 
 const { buildLocalDiffSource } = await import("../src/core/sources/local.js");
@@ -118,5 +123,16 @@ describe("buildLocalDiffSource — branch mode", () => {
 	it("author is taken from git config user.name", () => {
 		const source = buildLocalDiffSource({ base: "main" });
 		expect(source.author).toBe("developer");
+	});
+
+	it("passes an untrusted base ref as one literal argument without a shell", () => {
+		const base = "main; touch /tmp/pr-to-spec-injection";
+		buildLocalDiffSource({ base });
+
+		expect(execFileSyncMock).toHaveBeenCalledWith(
+			"git",
+			["diff", "--name-status", "--end-of-options", `${base}...HEAD`],
+			expect.objectContaining({ encoding: "utf8" }),
+		);
 	});
 });

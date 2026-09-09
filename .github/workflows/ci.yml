@@ -38,3 +38,9 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      - name: Bundle MCP server
+        run: pnpm bundle:mcp
+
+      - name: Verify committed MCP bundle
+        run: git diff --exit-code -- dist/mcp-bundle
