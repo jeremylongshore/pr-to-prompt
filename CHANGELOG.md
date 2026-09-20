@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-09-20
+
 ### Added
 
 - Expanded the `pr-to-spec` skill into a marketplace-grade operator guide with
@@ -24,6 +26,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Declare the `node24` Actions runtime in `action.yml`. GitHub removes `node20` on
+  2026-09-23; releases up to 0.8.0 declare it and stop starting on that date.
 - Require `--repo` and `--pr` only for root GitHub-PR analysis so documented
   local `scan`, `check`, and `intent` subcommands can execute independently.
 - Ship a self-contained MCP bundle, declare the custom skill path in the plugin

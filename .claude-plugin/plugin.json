@@ -1,6 +1,6 @@
 {
   "name": "pr-to-spec",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "The flight envelope for agentic coding. Convert PRs and local diffs into structured, agent-consumable specs with intent drift detection.",
   "author": {
     "name": "Jeremy Longshore",
