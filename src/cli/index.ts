@@ -21,7 +21,7 @@ import { scanCommand } from "./scan.js";
 program
 	.name("pr-to-spec")
 	.description("Convert code changes into structured, agent-consumable spec artifacts")
-	.version("0.8.0")
+	.version("0.8.1")
 	.option("--repo <owner/name>", "GitHub repository (owner/name)")
 	.option("--pr <number>", "Pull request number", Number.parseInt)
 	.option("--out <directory>", "Output directory", "./output")

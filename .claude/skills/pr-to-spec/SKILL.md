@@ -1,7 +1,7 @@
 ---
 name: pr-to-spec
 description: Analyze code changes and detect intent drift with the pr-to-spec CLI, converting a branch, staged edits, recent commits, or a GitHub pull request into an agent-consumable spec. Use when declaring intent before a change, checking completed work for drift, or producing review evidence. Trigger with "/pr-to-spec", "scan this diff", "check intent drift", or "declare change intent".
-version: 0.8.0
+version: 0.8.1
 author: Jeremy Longshore <jeremy@intentsolutions.io>
 license: MIT
 compatibility: Requires Node.js 20+, the pr-to-spec CLI on PATH, and a Git repository; remote pull-request analysis also requires GitHub read access.

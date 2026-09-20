@@ -229,7 +229,7 @@ function analyzeAssumptionsTool(args: z.infer<typeof AnalyzeAssumptionsSchema>) 
 const server = new Server(
 	{
 		name: "pr-spec-analyzer",
-		version: "0.8.0",
+		version: "0.8.1",
 	},
 	{
 		capabilities: {

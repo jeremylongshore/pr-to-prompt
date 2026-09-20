@@ -117,7 +117,7 @@ async function sendWebhook(
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
-			"User-Agent": "pr-to-spec/0.8.0",
+			"User-Agent": "pr-to-spec/0.8.1",
 		},
 		body: payload,
 	});
