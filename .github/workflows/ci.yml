@@ -14,13 +14,13 @@ jobs:
     name: Lint, Typecheck, Test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 9
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "20"
           cache: "pnpm"
@@ -39,17 +39,23 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Bundle MCP server
+        run: pnpm bundle:mcp
+
+      - name: Verify committed MCP bundle
+        run: git diff --exit-code -- dist/mcp-bundle
+
   site:
     name: Site Build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 9
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: pnpm
