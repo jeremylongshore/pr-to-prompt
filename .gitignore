@@ -4,7 +4,11 @@ dist/*
 !dist/mcp-bundle/
 *.tsbuildinfo
 .env
-.env.local
+.env.*
+*.pem
+*.key
+*.secret
+credentials.json
 coverage/
 .pr-to-prompt/
 output/
