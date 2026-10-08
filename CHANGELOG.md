@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Upgraded the documentation site to Astro 7.3.1, pinned vulnerable transitive paths to patched releases, and replaced a CWE-502-deprecated structured-clone path; full and production-only pnpm audits now report zero known vulnerabilities.
 - Raised the site runtime floor to Node.js 22.12 and added pull-request audit, test, typecheck, and build gates so dependency and framework upgrades are verified before deployment.
 - Escaped changelog text before applying its constrained bold/code rendering, preventing repository content from injecting executable HTML into the published page.
+- Bumped `@modelcontextprotocol/sdk` to ^1.32.1 (GHSA-6qxp-vccf-f47h) and rebuilt the committed `dist/mcp-bundle`; upgraded Vitest to 4.1.11, removing the vulnerable `tinypool` (GHSA-5gmw-xhrv-c9v3, GHSA-85c8-ppgw-ccpr).
+- Raised the site's stale override pins (`sharp` 0.35.5, `smol-toml` 1.9.0) and added `devalue`, `source-map-js` and `fast-uri` floors; `http-cache-semantics` (GHSA-ch52-4w7c-c8xp, no patched release) is ignored in the audit until a fix ships.
 
 ## [0.8.1] - 2026-09-20
 
