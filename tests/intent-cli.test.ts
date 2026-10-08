@@ -48,6 +48,8 @@ describe("intent set", () => {
 	});
 
 	afterEach(() => {
+		// Vitest 4: restoreAllMocks no longer clears vi.fn() call history.
+		vi.clearAllMocks();
 		vi.restoreAllMocks();
 	});
 
@@ -210,6 +212,8 @@ describe("intent show", () => {
 	});
 
 	afterEach(() => {
+		// Vitest 4: restoreAllMocks no longer clears vi.fn() call history.
+		vi.clearAllMocks();
 		vi.restoreAllMocks();
 	});
 
